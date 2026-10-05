@@ -1,6 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useRouter } from "next/navigation";
+import { useEffect, useState } from "react";
+import { authApi } from "../lib/auth-api";
 import styles from "./dashboard.module.css";
 
 const primaryItems = [
@@ -58,8 +60,28 @@ function SalesChannel({ label }) {
 }
 
 export default function DashboardPage() {
+  const router = useRouter();
   const [collapsed, setCollapsed] = useState(false);
   const [activeItem, setActiveItem] = useState("Home");
+  const [checkingAuth, setCheckingAuth] = useState(true);
+
+  useEffect(() => {
+    let active = true;
+
+    authApi.me()
+      .catch(() => {
+        if (active) router.replace("/");
+      })
+      .finally(() => {
+        if (active) setCheckingAuth(false);
+      });
+
+    return () => {
+      active = false;
+    };
+  }, [router]);
+
+  if (checkingAuth) return null;
 
   return (
     <main className={`${styles.shell} ${collapsed ? styles.collapsed : ""}`}>
