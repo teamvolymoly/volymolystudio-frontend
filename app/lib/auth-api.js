@@ -1,4 +1,6 @@
-const API_URL = (process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000").replace(/\/$/, "");
+// Vercel does not receive the local .env.local file. Keep the production API
+// as the safe deployment fallback while still allowing local env overrides.
+const API_URL = (process.env.NEXT_PUBLIC_API_URL || "https://volymoly.com").replace(/\/$/, "");
 
 let csrfRequest;
 let csrfToken = "";
