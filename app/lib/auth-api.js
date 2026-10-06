@@ -1,11 +1,10 @@
-// Local development defaults to the local Laravel API. Deployments set the
-// production URL explicitly through NEXT_PUBLIC_API_URL.
-const API_URL = (process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000").replace(/\/$/, "");
+// Keep auth requests on the frontend origin. The server-side route forwards
+// them to Laravel so browser sessions do not rely on third-party cookies.
 
 async function getCsrfToken() {
   // Laravel rotates the session token after login/logout. Read the token for
   // the current session before every mutation instead of caching an old one.
-  const response = await fetch(`${API_URL}/api/auth/csrf-token`, {
+  const response = await fetch("/api/auth/csrf-token", {
     credentials: "include",
     headers: { Accept: "application/json" },
   });
@@ -34,7 +33,7 @@ async function request(path, options = {}, csrfRetry = false) {
     if (csrfToken) headers.set("X-CSRF-TOKEN", csrfToken);
   }
 
-  const response = await fetch(`${API_URL}${path}`, {
+  const response = await fetch(path, {
     ...options,
     method,
     headers,
