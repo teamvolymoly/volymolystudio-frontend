@@ -5,18 +5,10 @@ const API_URL = (process.env.NEXT_PUBLIC_API_URL || "https://volymoly.com").repl
 let csrfRequest;
 let csrfToken = "";
 
-function getCookie(name) {
-  if (typeof document === "undefined") return "";
-
-  const row = document.cookie
-    .split("; ")
-    .find((cookie) => cookie.startsWith(`${name}=`));
-
-  return row ? decodeURIComponent(row.split("=").slice(1).join("=")) : "";
-}
-
 async function ensureCsrfCookie() {
-  if (csrfToken || getCookie("XSRF-TOKEN")) return;
+  // Never trust a previously stored XSRF cookie here. It may belong to an
+  // older Laravel session, especially after a deployment or password reset.
+  if (csrfToken) return;
 
   if (!csrfRequest) {
     csrfRequest = fetch(`${API_URL}/api/auth/csrf-token`, {
@@ -39,7 +31,7 @@ async function ensureCsrfCookie() {
   await csrfRequest;
 }
 
-async function request(path, options = {}) {
+async function request(path, options = {}, csrfRetry = false) {
   const method = (options.method || "GET").toUpperCase();
   const isMutation = !["GET", "HEAD", "OPTIONS"].includes(method);
 
@@ -51,8 +43,7 @@ async function request(path, options = {}) {
   if (isMutation) {
     headers.set("Content-Type", "application/json");
 
-    const token = csrfToken || getCookie("XSRF-TOKEN");
-    if (token) headers.set("X-CSRF-TOKEN", token);
+    if (csrfToken) headers.set("X-CSRF-TOKEN", csrfToken);
   }
 
   const response = await fetch(`${API_URL}${path}`, {
@@ -61,6 +52,15 @@ async function request(path, options = {}) {
     headers,
     credentials: "include",
   });
+
+  if (response.status === 419 && isMutation && !csrfRetry) {
+    // The browser may still hold a session from before a deployment. Refresh
+    // the token/session pair once, then retry the same request.
+    csrfToken = "";
+    csrfRequest = undefined;
+    await ensureCsrfCookie();
+    return request(path, options, true);
+  }
 
   const responseText = await response.text();
   let payload = {};
