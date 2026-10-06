@@ -1,41 +1,29 @@
-// Vercel does not receive the local .env.local file. Keep the production API
-// as the safe deployment fallback while still allowing local env overrides.
-const API_URL = (process.env.NEXT_PUBLIC_API_URL || "https://volymoly.com").replace(/\/$/, "");
+// Local development defaults to the local Laravel API. Deployments set the
+// production URL explicitly through NEXT_PUBLIC_API_URL.
+const API_URL = (process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000").replace(/\/$/, "");
 
-let csrfRequest;
-let csrfToken = "";
-
-async function ensureCsrfCookie() {
-  // Never trust a previously stored XSRF cookie here. It may belong to an
-  // older Laravel session, especially after a deployment or password reset.
-  if (csrfToken) return;
-
-  if (!csrfRequest) {
-    csrfRequest = fetch(`${API_URL}/api/auth/csrf-token`, {
-      credentials: "include",
-      headers: { Accept: "application/json" },
-    })
-      .then(async (response) => {
-        if (!response.ok) {
-          throw new Error("Unable to initialize the authentication session.");
-        }
-        const payload = await response.json();
-        csrfToken = payload.token || "";
-      })
-      .catch((error) => {
-        csrfRequest = undefined;
-        throw error;
-      });
+async function getCsrfToken() {
+  // Laravel rotates the session token after login/logout. Read the token for
+  // the current session before every mutation instead of caching an old one.
+  const response = await fetch(`${API_URL}/api/auth/csrf-token`, {
+    credentials: "include",
+    headers: { Accept: "application/json" },
+  });
+  if (!response.ok) {
+    throw new Error("Unable to initialize the authentication session.");
   }
-
-  await csrfRequest;
+  const payload = await response.json();
+  if (!payload.token) {
+    throw new Error("The authentication session did not return a CSRF token.");
+  }
+  return payload.token;
 }
 
 async function request(path, options = {}, csrfRetry = false) {
   const method = (options.method || "GET").toUpperCase();
   const isMutation = !["GET", "HEAD", "OPTIONS"].includes(method);
 
-  if (isMutation) await ensureCsrfCookie();
+  const csrfToken = isMutation ? await getCsrfToken() : "";
 
   const headers = new Headers(options.headers || {});
   headers.set("Accept", "application/json");
@@ -56,9 +44,6 @@ async function request(path, options = {}, csrfRetry = false) {
   if (response.status === 419 && isMutation && !csrfRetry) {
     // The browser may still hold a session from before a deployment. Refresh
     // the token/session pair once, then retry the same request.
-    csrfToken = "";
-    csrfRequest = undefined;
-    await ensureCsrfCookie();
     return request(path, options, true);
   }
 

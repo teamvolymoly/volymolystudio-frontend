@@ -5,9 +5,6 @@ import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { authApi } from "./lib/auth-api";
 
-const DEFAULT_LOGIN_EMAIL = "thatswhatshecoded@gmail.com";
-const RESET_EMAIL = "teamvolymoly@gmail.com";
-
 const SCREEN_NAMES = new Set([
   "login",
   "google",
@@ -138,7 +135,7 @@ function Notice({ children, tone = "success", onDismiss }) {
 function EmailSummary({ email, onChangeEmail }) {
   return (
     <div className="email-summary">
-      <span>{email || DEFAULT_LOGIN_EMAIL}</span>
+      <span>{email}</span>
       <button className="text-link accent" onClick={onChangeEmail} type="button">
         Change Email
       </button>
@@ -305,7 +302,7 @@ function VerifyScreen({ email, purpose = "registration", requestId, goTo, onVeri
     <div className="screen-content verify-screen">
       <header className="intro centered">
         <h1>Verify your account to<br />continue</h1>
-        <p>For added security, enter the 6 digit code sent to<br />{email || DEFAULT_LOGIN_EMAIL}.</p>
+        <p>For added security, enter the 6 digit code sent to<br />{email}.</p>
       </header>
       <div className="otp-section">
         <div aria-label="Six digit verification code" className="otp-row">
@@ -359,6 +356,10 @@ function PasswordScreen({ email, goTo, onLogin, invalid = false, notice }) {
               setShowRequired(true);
               return;
             }
+            if (!email) {
+              goTo("login");
+              return;
+            }
 
             setLoading(true);
             setErrorMessage("");
@@ -402,6 +403,7 @@ function PasswordScreen({ email, goTo, onLogin, invalid = false, notice }) {
 function ForgotPasswordScreen({ email, goTo, onForgotPassword }) {
   const [errorMessage, setErrorMessage] = useState("");
   const [loading, setLoading] = useState(false);
+  const targetEmail = email.trim();
 
   return (
     <div className="screen-content password-screen forgot-screen">
@@ -411,10 +413,14 @@ function ForgotPasswordScreen({ email, goTo, onForgotPassword }) {
           className="stacked-form"
           onSubmit={async (event) => {
             event.preventDefault();
+            if (!targetEmail) {
+              setErrorMessage("Enter your email address first.");
+              return;
+            }
             setLoading(true);
             setErrorMessage("");
 
-            onForgotPassword(email)
+            onForgotPassword(targetEmail)
               .then(() => goTo("link-sent"))
               .catch((error) => setErrorMessage(error.message || "We could not send a reset link."))
               .finally(() => setLoading(false));
@@ -517,7 +523,7 @@ function ResetPasswordScreen({ email, token, goTo, onResetPassword, showError = 
   const [confirmPassword, setConfirmPassword] = useState("");
   const [errorMessage, setErrorMessage] = useState("");
   const [loading, setLoading] = useState(false);
-  const resetEmail = email || RESET_EMAIL;
+  const resetEmail = email;
 
   return (
     <div className="screen-content reset-screen">
@@ -539,8 +545,8 @@ function ResetPasswordScreen({ email, token, goTo, onResetPassword, showError = 
             return;
           }
 
-          if (!token) {
-            goTo("reset-success");
+          if (!token || !resetEmail) {
+            setErrorMessage("This reset link is incomplete. Request a new password reset email.");
             return;
           }
 
@@ -585,7 +591,7 @@ function ResetPasswordScreen({ email, token, goTo, onResetPassword, showError = 
             setConfirmPassword(event.target.value);
             setErrorMessage("");
           }}
-          placeholder="Enter your personal or work email"
+          placeholder="Confirm your new password"
           type="password"
           value={confirmPassword}
         />
@@ -644,7 +650,7 @@ function Screen({
     case "forgot-password":
       return <ForgotPasswordScreen email={email} goTo={goTo} onForgotPassword={onForgotPassword} />;
     case "link-sent":
-      return <PasswordScreen email={email} goTo={goTo} onLogin={onLogin} notice={{ message: "A link to reset your password has been emailed to you.", tone: "success" }} />;
+      return <PasswordScreen email={email} goTo={goTo} onLogin={onLogin} notice={{ message: "If an account exists for this email, a reset link will arrive shortly.", tone: "success" }} />;
     case "recover-account":
       return <RecoverAccountScreen goTo={goTo} onStartRecovery={onStartRecovery} />;
     case "recover-account-error":
@@ -718,6 +724,9 @@ export default function Home() {
     }
 
     const params = new URLSearchParams({ screen: nextScreen });
+    if (["password", "incorrect-password", "forgot-password", "link-sent", "reset-success", "link-expired"].includes(nextScreen) && nextEmail) {
+      params.set("email", nextEmail);
+    }
     if (nextScreen === "verify" && nextVerification.email) {
       params.set("email", nextVerification.email);
       params.set("purpose", nextVerification.purpose || "registration");
