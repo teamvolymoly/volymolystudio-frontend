@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { authApi } from "../lib/auth-api";
@@ -30,9 +31,12 @@ export function GoogleErrorNotice() {
 
   return (
     <div className="notice notice-error" role="alert">
-      <span>{message}</span>
+      <div className="notice-content">
+        <Image alt="" className="notice-icon" height={20} src="/auth-icons/alert-error.svg" width={20} />
+        <span>{message}</span>
+      </div>
       <button className="notice-close" aria-label="Dismiss message" onClick={() => setMessage("")} type="button">
-        &times;
+        <Image alt="" height={20} src="/auth-icons/close-error.svg" width={20} />
       </button>
     </div>
   );

@@ -50,41 +50,44 @@ function useResendCooldown() {
   return [remaining, startCooldown];
 }
 
-function EyeIcon({ open = false }) {
+function EyeIcon() {
   return (
-    <svg aria-hidden="true" className="eye-icon" viewBox="0 0 24 24">
-      <path d="M2.5 12s3.5-6 9.5-6 9.5 6 9.5 6-3.5 6-9.5 6-9.5-6-9.5-6Z" />
-      <circle cx="12" cy="12" r="2.75" />
-      {open ? <path d="m4 4 16 16" /> : null}
-    </svg>
+    <Image
+      alt=""
+      className="eye-icon"
+      height={24}
+      src="/auth-icons/view-password.svg"
+      width={24}
+    />
   );
 }
 
 function AlertIcon() {
   return (
-    <svg aria-hidden="true" className="alert-icon" viewBox="0 0 16 16">
-      <circle cx="8" cy="8" r="6.25" />
-      <path d="M8 4.5v4M8 11.25v.25" />
-    </svg>
+    <Image
+      alt=""
+      className="alert-icon"
+      height={16}
+      src="/auth-icons/alert-circle.svg"
+      width={16}
+    />
   );
 }
 
-function CheckIcon() {
-  return (
-    <svg aria-hidden="true" className="notice-icon" viewBox="0 0 16 16">
-      <circle cx="8" cy="8" r="6.25" />
-      <path d="m4.75 8.1 2.05 2.05 4.45-4.45" />
-    </svg>
-  );
-}
-
-function CloseIcon() {
-  return (
-    <svg aria-hidden="true" viewBox="0 0 16 16">
-      <path d="m4 4 8 8M12 4l-8 8" />
-    </svg>
-  );
-}
+const NOTICE_ICONS = {
+  success: {
+    status: "/auth-icons/check-circle.svg",
+    close: "/auth-icons/close.svg",
+  },
+  error: {
+    status: "/auth-icons/alert-error.svg",
+    close: "/auth-icons/close-error.svg",
+  },
+  warning: {
+    status: "/auth-icons/alert-warning.svg",
+    close: "/auth-icons/close-warning.svg",
+  },
+};
 
 function Footer() {
   return (
@@ -132,7 +135,7 @@ function TextField({
             onClick={() => setVisible((current) => !current)}
             type="button"
           >
-            <EyeIcon open={visible} />
+            <EyeIcon />
           </button>
         ) : null}
       </span>
@@ -148,12 +151,16 @@ function TextField({
 }
 
 function Notice({ children, tone = "success", onDismiss }) {
+  const icons = NOTICE_ICONS[tone] || NOTICE_ICONS.success;
+
   return (
     <div className={`notice notice-${tone}`} role={tone === "error" ? "alert" : "status"}>
-      {tone === "success" ? <CheckIcon /> : <AlertIcon />}
-      <span>{children}</span>
+      <div className="notice-content">
+        <Image alt="" className="notice-icon" height={20} src={icons.status} width={20} />
+        <span>{children}</span>
+      </div>
       <button aria-label="Dismiss message" className="notice-close" onClick={onDismiss} type="button">
-        <CloseIcon />
+        <Image alt="" height={20} src={icons.close} width={20} />
       </button>
     </div>
   );
@@ -811,7 +818,7 @@ function Screen({
     case "account-exists-google":
       return <PasswordScreen email={email} goTo={goTo} onLogin={onLogin} notice={{ message: "An account with this email already exists, and is not connected to Google.", tone: "warning" }} />;
     case "google-account-not-found":
-      return <PasswordScreen email={email} goTo={goTo} onLogin={onLogin} notice={{ message: "We couldn’t find a volymoly account connected to your Google account.", tone: "error" }} />;
+      return <PasswordScreen email={email} goTo={goTo} onLogin={onLogin} notice={{ message: "we couldn’t find a volymoly account connected to your google account.", tone: "error" }} />;
     case "forgot-password":
       return <ForgotPasswordScreen email={email} goTo={goTo} onForgotPassword={onForgotPassword} />;
     case "link-sent":
