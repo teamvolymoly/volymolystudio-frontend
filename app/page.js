@@ -4,10 +4,12 @@ import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { authApi } from "./lib/auth-api";
+import { GoogleLinkScreen, GoogleErrorNotice } from "./components/google-auth";
 
 const SCREEN_NAMES = new Set([
   "login",
   "google",
+  "google-link",
   "email-error",
   "verify",
   "password",
@@ -22,6 +24,27 @@ const SCREEN_NAMES = new Set([
   "link-expired",
   "error"
 ]);
+
+function useResendCooldown() {
+  const [remaining, setRemaining] = useState(0);
+  const deadline = useRef(0);
+
+  useEffect(() => {
+    if (remaining <= 0) return;
+    const timer = window.setTimeout(() => {
+      setRemaining(Math.max(0, Math.ceil((deadline.current - Date.now()) / 1000)));
+    }, 1000);
+    return () => window.clearTimeout(timer);
+  }, [remaining]);
+
+  function startCooldown(seconds) {
+    const duration = Math.min(3600, Math.max(0, Math.ceil(Number(seconds) || 0)));
+    deadline.current = Date.now() + duration * 1000;
+    setRemaining(duration);
+  }
+
+  return [remaining, startCooldown];
+}
 
 function EyeIcon({ open = false }) {
   return (
@@ -206,7 +229,7 @@ function LoginScreen({ email, setEmail, goTo, onSendVerification, forceError = f
 
       <form className="login-form" onSubmit={continueWithEmail}>
         <div className="social-group">
-          <button className="google-button" onClick={() => goTo("google")} type="button">
+          <button className="google-button" onClick={() => authApi.startGoogleLogin()} type="button">
             <Image alt="" height={20} src="/google-logo.svg" width={20} />
             <span>Continue with Google</span>
           </button>
@@ -242,58 +265,100 @@ function GoogleScreen() {
   return (
     <div className="screen-content message-screen google-screen">
       <h1>Redirecting to Google</h1>
-      <p>This will only take a moment......</p>
+      <p>Continue to securely sign in with your Google account.</p>
+      <button className="primary-button" onClick={() => authApi.startGoogleLogin()} type="button">Continue with Google</button>
     </div>
   );
 }
 
 function VerifyScreen({ email, purpose = "registration", requestId, goTo, onVerifyCode, onSendVerification }) {
+  const router = useRouter();
+  const busy = useRef(false);
+  const focusFirstInput = useRef(false);
+  const [restartRequired, setRestartRequired] = useState(false);
   const [digits, setDigits] = useState(["", "", "", "", "", ""]);
   const [errorMessage, setErrorMessage] = useState("");
   const [loading, setLoading] = useState(false);
   const [resending, setResending] = useState(false);
+  const [codeSent, setCodeSent] = useState(false);
+  const [resendWait, startResendCooldown] = useResendCooldown();
   const inputs = useRef([]);
+  const completeCode = digits.every((digit) => /^\d$/.test(digit));
+
+  useEffect(() => {
+    if (focusFirstInput.current && !loading && !resending && !restartRequired) {
+      inputs.current[0]?.focus();
+      focusFirstInput.current = false;
+    }
+  }, [loading, resending, restartRequired]);
 
   async function submitCode(code) {
-    if (loading || !email) return;
+    if (busy.current || restartRequired || !email) return;
+    if (!/^\d{6}$/.test(code)) {
+      setErrorMessage("Enter the complete 6 digit code.");
+      return;
+    }
+    busy.current = true;
 
     setLoading(true);
     setErrorMessage("");
+    setCodeSent(false);
 
     try {
       await onVerifyCode(email, code, purpose, requestId);
-      goTo("password");
+      if (purpose === "login") {
+        router.replace("/dashboard");
+      } else {
+        goTo("password");
+      }
     } catch (error) {
       setErrorMessage(error.message || "The verification code is invalid or expired.");
+      setRestartRequired(error.restartLogin === true);
+      setDigits(["", "", "", "", "", ""]);
+      focusFirstInput.current = true;
     } finally {
+      busy.current = false;
       setLoading(false);
     }
   }
 
   function updateDigit(event, index) {
-    const digit = event.target.value.replace(/\D/g, "").slice(-1);
+    const value = event.target.value.replace(/\D/g, "");
+    if (value.length === 6) {
+      setDigits(value.split(""));
+      setErrorMessage("");
+      inputs.current[5]?.focus();
+      return;
+    }
+    const digit = value.slice(-1);
     const nextDigits = [...digits];
     nextDigits[index] = digit;
     setDigits(nextDigits);
     setErrorMessage("");
 
     if (digit && index < 5) inputs.current[index + 1]?.focus();
-    if (nextDigits.every(Boolean)) void submitCode(nextDigits.join(""));
   }
 
   async function resendCode() {
-    if (!email || resending) return;
+    if (!email || busy.current || restartRequired || resendWait > 0) return;
 
+    busy.current = true;
     setResending(true);
     setErrorMessage("");
+    setCodeSent(false);
 
     try {
-      await onSendVerification(email, purpose, requestId);
+      const result = await onSendVerification(email, purpose, requestId);
+      startResendCooldown(result.retry_after || 60);
+      setCodeSent(true);
       setDigits(["", "", "", "", "", ""]);
-      inputs.current[0]?.focus();
+      focusFirstInput.current = true;
     } catch (error) {
       setErrorMessage(error.message || "We could not resend the verification code.");
+      if (error.status === 429 && !error.restartLogin) startResendCooldown(error.retryAfter || 60);
+      setRestartRequired(error.restartLogin === true);
     } finally {
+      busy.current = false;
       setResending(false);
     }
   }
@@ -301,17 +366,33 @@ function VerifyScreen({ email, purpose = "registration", requestId, goTo, onVeri
   return (
     <div className="screen-content verify-screen">
       <header className="intro centered">
-        <h1>Verify your account to<br />continue</h1>
-        <p>For added security, enter the 6 digit code sent to<br />{email}.</p>
+        <h1>Verify your email to continue</h1>
+        <p>For added security, enter the 6 digit code sent to<span className="verification-email">{email}</span></p>
       </header>
-      <div className="otp-section">
-        <div aria-label="Six digit verification code" className="otp-row">
+      <form className="otp-section" onSubmit={(event) => {
+        event.preventDefault();
+        void submitCode(digits.join(""));
+      }}>
+        {codeSent ? <Notice onDismiss={() => setCodeSent(false)}>New code sent</Notice> : null}
+        <div aria-label="Six digit verification code" className="otp-row" role="group">
           {digits.map((digit, index) => (
             <input
               aria-label={`Digit ${index + 1}`}
+              aria-invalid={Boolean(errorMessage)}
+              aria-describedby={errorMessage ? "otp-error" : undefined}
+              autoComplete={index === 0 ? "one-time-code" : "off"}
+              disabled={loading || resending || restartRequired}
               inputMode="numeric"
               key={index}
-              maxLength={1}
+              maxLength={index === 0 ? 6 : 1}
+              onPaste={(event) => {
+                const code = event.clipboardData.getData("text").replace(/\D/g, "");
+                if (code.length !== 6) return;
+                event.preventDefault();
+                setDigits(code.split(""));
+                setErrorMessage("");
+                inputs.current[5]?.focus();
+              }}
               onChange={(event) => updateDigit(event, index)}
               onKeyDown={(event) => {
                 if (event.key === "Backspace" && !digit && index > 0) inputs.current[index - 1]?.focus();
@@ -321,20 +402,27 @@ function VerifyScreen({ email, purpose = "registration", requestId, goTo, onVeri
             />
           ))}
         </div>
-        {errorMessage ? <p className="field-error" role="alert"><AlertIcon />{errorMessage}</p> : null}
+        {errorMessage ? <p className="field-error" id="otp-error" role="alert"><AlertIcon />{errorMessage}</p> : null}
+        <button className="primary-button otp-verify-button" disabled={!completeCode || !email || loading || resending || restartRequired} type="submit">
+          {loading ? "Verifying..." : "Verify"}
+        </button>
         <p className="resend-copy">
           Didn&apos;t receive a code?{" "}
-          <button className="text-link accent" disabled={resending || loading} onClick={resendCode} type="button">
-            {resending ? "Sending..." : "Resend code"}
+          <button className="text-link accent" disabled={resending || loading || restartRequired || resendWait > 0} onClick={resendCode} type="button">
+            {resending ? "Sending..." : resendWait > 0 ? `Resend code (${resendWait}s)` : "Resend code"}
           </button>
         </p>
-      </div>
+        {purpose === "login" && restartRequired ? (
+          <button className="text-link accent" disabled={loading || resending} onClick={() => goTo("login")} type="button">
+            Back to sign in
+          </button>
+        ) : null}
+      </form>
     </div>
   );
 }
 
 function PasswordScreen({ email, goTo, onLogin, invalid = false, notice }) {
-  const router = useRouter();
   const [password, setPassword] = useState("");
   const [showRequired, setShowRequired] = useState(false);
   const [showNotice, setShowNotice] = useState(Boolean(notice));
@@ -365,8 +453,15 @@ function PasswordScreen({ email, goTo, onLogin, invalid = false, notice }) {
             setErrorMessage("");
 
             try {
-              await onLogin(email, password);
-              router.push("/dashboard");
+              const result = await onLogin(email, password);
+              if (!result.otp_required) {
+                throw new Error("Unable to start login verification. Please try again.");
+              }
+              setPassword("");
+              goTo("verify", {
+                email: result.email || email,
+                verification: { email: result.email || email, purpose: "login", requestId: "" },
+              });
             } catch (error) {
               setErrorMessage(error.message || "Incorrect Password");
             } finally {
@@ -400,36 +495,67 @@ function PasswordScreen({ email, goTo, onLogin, invalid = false, notice }) {
   );
 }
 
-function ForgotPasswordScreen({ email, goTo, onForgotPassword }) {
+function ForgotPasswordScreen({ email, goTo, onForgotPassword, state }) {
+  const [targetEmail, setTargetEmail] = useState(email);
   const [errorMessage, setErrorMessage] = useState("");
   const [loading, setLoading] = useState(false);
-  const targetEmail = email.trim();
+  const [noticeVisible, setNoticeVisible] = useState(true);
+  const [resendWait, startCooldown] = useResendCooldown();
+  const busy = useRef(false);
+  const expired = state === "expired";
+  const sent = state === "sent";
+
+  async function sendResetLink(event) {
+    event.preventDefault();
+    if (busy.current || resendWait > 0) return;
+    const address = targetEmail.trim();
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(address)) {
+      setErrorMessage("Enter a valid email address.");
+      return;
+    }
+    busy.current = true;
+    setLoading(true);
+    setErrorMessage("");
+    setNoticeVisible(false);
+    try {
+      const result = await onForgotPassword(address);
+      startCooldown(result.retry_after || 60);
+      setNoticeVisible(true);
+      goTo("link-sent", { email: address, resetToken: "" });
+    } catch (error) {
+      setErrorMessage(error.message || "We could not send a reset link.");
+      if (error.status === 429) startCooldown(error.retryAfter || 60);
+    } finally {
+      busy.current = false;
+      setLoading(false);
+    }
+  }
 
   return (
     <div className="screen-content password-screen forgot-screen">
-      <LoginHeader />
+      <LoginHeader title={expired ? "Reset link expired" : "Reset your password"} />
       <div className="password-body">
-        <form
-          className="stacked-form"
-          onSubmit={async (event) => {
-            event.preventDefault();
-            if (!targetEmail) {
-              setErrorMessage("Enter your email address first.");
-              return;
-            }
-            setLoading(true);
-            setErrorMessage("");
-
-            onForgotPassword(targetEmail)
-              .then(() => goTo("link-sent"))
-              .catch((error) => setErrorMessage(error.message || "We could not send a reset link."))
-              .finally(() => setLoading(false));
-          }}
-        >
-          <EmailSummary email={email} onChangeEmail={() => goTo("login")} />
+        {noticeVisible && (expired || sent) ? (
+          <Notice tone={expired ? "error" : "success"} onDismiss={() => setNoticeVisible(false)}>
+            {expired
+              ? "This reset link is invalid or expired. Request a new link below."
+              : "If an account exists for this email, a reset link will arrive shortly."}
+          </Notice>
+        ) : null}
+        <form className="stacked-form" onSubmit={sendResetLink}>
+          {expired || !email ? (
+            <TextField label="Email" autoComplete="email" value={targetEmail}
+              onChange={(event) => { setTargetEmail(event.target.value); setErrorMessage(""); }}
+              placeholder="Enter your account email" />
+          ) : (
+            <EmailSummary email={targetEmail} onChangeEmail={() => goTo("login")} />
+          )}
           {errorMessage ? <p className="field-error" role="alert"><AlertIcon />{errorMessage}</p> : null}
-          <button className="primary-button" disabled={loading} type="submit">
-            {loading ? "Sending..." : "Email password reset"}
+          <button className="primary-button" disabled={loading || resendWait > 0} type="submit">
+            {loading ? "Sending..." : resendWait > 0 ? "Please wait " + resendWait + "s" : sent ? "Resend reset link" : expired ? "Send new reset link" : "Email password reset"}
+          </button>
+          <button className="text-link back-link" disabled={loading} onClick={() => goTo("password", { email: targetEmail.trim() })} type="button">
+            Back to login
           </button>
           <p className="recovery-copy">
             Lost access to email?{" "}
@@ -546,7 +672,7 @@ function ResetPasswordScreen({ email, token, goTo, onResetPassword, showError = 
           }
 
           if (!token || !resetEmail) {
-            setErrorMessage("This reset link is incomplete. Request a new password reset email.");
+            goTo("link-expired", { email: resetEmail, resetToken: "" });
             return;
           }
 
@@ -562,8 +688,8 @@ function ResetPasswordScreen({ email, token, goTo, onResetPassword, showError = 
             .then(() => goTo("reset-success", { email: resetEmail }))
             .catch((error) => {
               const passwordError = error.errors?.password?.[0];
-              if (error.status === 422 && !passwordError) {
-                goTo("link-expired", { email: resetEmail });
+              if (error.status === 422 && error.errors?.token) {
+                goTo("link-expired", { email: resetEmail, resetToken: "" });
                 return;
               }
               setErrorMessage(passwordError || error.message || "We could not reset your password.");
@@ -630,6 +756,8 @@ function Screen({
   switch (screen) {
     case "google":
       return <GoogleScreen />;
+    case "google-link":
+      return <GoogleLinkScreen onCancel={() => goTo("login")} />;
     case "email-error":
       return <LoginScreen email={email} forceError goTo={goTo} onSendVerification={onSendVerification} setEmail={setEmail} />;
     case "verify":
@@ -650,7 +778,7 @@ function Screen({
     case "forgot-password":
       return <ForgotPasswordScreen email={email} goTo={goTo} onForgotPassword={onForgotPassword} />;
     case "link-sent":
-      return <PasswordScreen email={email} goTo={goTo} onLogin={onLogin} notice={{ message: "If an account exists for this email, a reset link will arrive shortly.", tone: "success" }} />;
+      return <ForgotPasswordScreen email={email} goTo={goTo} onForgotPassword={onForgotPassword} state="sent" />;
     case "recover-account":
       return <RecoverAccountScreen goTo={goTo} onStartRecovery={onStartRecovery} />;
     case "recover-account-error":
@@ -662,7 +790,7 @@ function Screen({
     case "reset-success":
       return <PasswordScreen email={email} goTo={goTo} onLogin={onLogin} notice={{ message: "Your password was reset. You can log in using your new password.", tone: "success" }} />;
     case "link-expired":
-      return <PasswordScreen email={email} goTo={goTo} onLogin={onLogin} notice={{ message: "Link expired. Enter your email below to receive a new reset link.", tone: "error" }} />;
+      return <ForgotPasswordScreen email={email} goTo={goTo} onForgotPassword={onForgotPassword} state="expired" />;
     case "error":
       return <ErrorScreen />;
     default:
@@ -732,7 +860,7 @@ export default function Home() {
       params.set("purpose", nextVerification.purpose || "registration");
       if (nextVerification.requestId) params.set("request_id", nextVerification.requestId);
     }
-    if (nextScreen === "reset-password" && nextResetEmail) {
+    if (["reset-password", "password-too-short"].includes(nextScreen) && nextResetEmail) {
       params.set("email", nextResetEmail);
       if (nextResetToken) params.set("token", nextResetToken);
     }
@@ -742,11 +870,15 @@ export default function Home() {
   }
 
   function sendVerificationCode(targetEmail, purpose, requestId) {
-    return authApi.sendVerificationCode(targetEmail, purpose, requestId);
+    return purpose === "login"
+      ? authApi.resendLoginCode()
+      : authApi.sendVerificationCode(targetEmail, purpose, requestId);
   }
 
   function verifyCode(targetEmail, code, purpose, requestId) {
-    return authApi.verifyCode(targetEmail, code, purpose, requestId);
+    return purpose === "login"
+      ? authApi.verifyLoginCode(code)
+      : authApi.verifyCode(targetEmail, code, purpose, requestId);
   }
 
   function login(targetEmail, password) {
@@ -770,6 +902,7 @@ export default function Home() {
       <section className="auth-panel">
         <div className="panel-content">
           <Image alt="Volymoly" className="brand-logo" height={46} priority src="/logo.svg" width={158} />
+          <GoogleErrorNotice />
           <Screen
             email={email}
             goTo={goTo}

@@ -468,8 +468,45 @@ input {
   gap: 64px;
 }
 
+.verification-email {
+  display: block;
+  overflow-wrap: anywhere;
+}
+
 .otp-section {
   width: 100%;
+}
+
+.otp-section .notice {
+  min-height: 32px;
+  margin-bottom: 32px;
+  align-items: center;
+}
+
+.otp-section .notice > span {
+  width: auto;
+}
+
+.otp-verify-button {
+  margin-top: 16px;
+}
+
+.otp-verify-button:disabled {
+  background: var(--email-background);
+  color: var(--email-default);
+  cursor: not-allowed;
+  transform: none;
+}
+
+.verify-screen .resend-copy {
+  font-size: 14px;
+  font-weight: 400;
+  line-height: 20px;
+}
+
+.verify-screen .text-link:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
 }
 
 .otp-row {

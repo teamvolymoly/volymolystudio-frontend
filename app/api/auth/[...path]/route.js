@@ -1,13 +1,30 @@
+import { loginClientHeaders } from "../../../lib/login-client-context.js";
+
 // The deployed frontend and Laravel API have different top-level domains.
 // Proxy only the auth endpoints so Laravel's session cookie belongs to the
 // frontend origin in the browser, while Laravel still owns all auth logic.
-const API_ORIGIN = process.env.API_UPSTREAM_URL || "https://volymoly.com";
+function apiOrigin() {
+  const configured = process.env.API_UPSTREAM_URL || (process.env.NODE_ENV === "development" ? "http://localhost:8000" : "https://volymoly.com");
+  const url = new URL(configured);
+  const loopback = url.hostname === "localhost" || url.hostname.endsWith(".localhost") || url.hostname === "[::1]" || /^127\./.test(url.hostname);
+  if (!['http:', 'https:'].includes(url.protocol) || url.username || url.password || url.pathname !== '/' || url.search || url.hash ||
+      (process.env.NODE_ENV === "production" && (url.protocol !== "https:" || loopback))) {
+    throw new Error("Invalid API upstream configuration");
+  }
+  return url.origin;
+}
 const SESSION_COOKIE_NAME = process.env.LARAVEL_SESSION_COOKIE || "laravel_session";
 
 const METHODS = new Map([
   ["csrf-token", "GET"],
+  ["google/redirect", "GET"],
+  ["google/callback", "GET"],
+  ["google/link", "POST"],
   ["login", "POST"],
+  ["login/verify", "POST"],
+  ["login/resend", "POST"],
   ["me", "GET"],
+  ["security/activity", "GET"],
   ["logout", "POST"],
   ["verification/send", "POST"],
   ["verification/verify", "POST"],
@@ -25,7 +42,7 @@ function sessionCookies(cookieHeader) {
     .map((cookie) => cookie.trim())
     .filter((cookie) => {
       const name = cookie.split("=", 1)[0];
-      return name === SESSION_COOKIE_NAME || name === "XSRF-TOKEN";
+      return name === SESSION_COOKIE_NAME || name === "XSRF-TOKEN" || name === "volymoly_device";
     })
     .join("; ");
 }
@@ -38,7 +55,7 @@ async function proxy(request, { params }) {
     return Response.json({ message: "Not found." }, { status: 404 });
   }
 
-  const headers = new Headers({ Accept: "application/json" });
+  const headers = new Headers({ Accept: "application/json", ...loginClientHeaders(request, endpoint) });
   for (const name of ["content-type", "x-csrf-token"]) {
     const value = request.headers.get(name);
     if (value) headers.set(name, value);
@@ -49,7 +66,18 @@ async function proxy(request, { params }) {
 
   let upstream;
   try {
-    const url = new URL(`/api/auth/${endpoint}`, API_ORIGIN);
+    const url = new URL(`/api/auth/${endpoint}`, apiOrigin());
+    if (endpoint === "security/activity") {
+      const token = new URL(request.url).searchParams.get("token");
+      if (token) url.searchParams.set("token", token);
+    }
+    if (endpoint === "google/callback") {
+      // Forward OAuth response fields, never arbitrary upstream URLs.
+      const incoming = new URL(request.url).searchParams;
+      for (const name of ["code", "state", "error", "error_description", "scope", "authuser", "prompt"]) {
+        if (incoming.has(name)) url.searchParams.set(name, incoming.get(name));
+      }
+    }
     upstream = await fetch(url, {
       method: request.method,
       headers,
@@ -65,7 +93,24 @@ async function proxy(request, { params }) {
     );
   }
 
-  const responseHeaders = new Headers({ "Cache-Control": "no-store" });
+  if (upstream.status >= 500) {
+    await upstream.body?.cancel();
+    return Response.json(
+      { message: "Authentication service is unavailable. Please try again." },
+      { status: 503, headers: { "Cache-Control": "no-store" } },
+    );
+  }
+
+  const responseHeaders = new Headers({
+    "Cache-Control": "no-store",
+    "Referrer-Policy": "no-referrer",
+  });
+  if (endpoint === "google/redirect" || endpoint === "google/callback") {
+    const location = upstream.headers.get("location");
+    if (location && upstream.status >= 300 && upstream.status < 400) {
+      responseHeaders.set("Location", location);
+    }
+  }
   for (const name of ["content-type", "retry-after"]) {
     const value = upstream.headers.get(name);
     if (value) responseHeaders.set(name, value);

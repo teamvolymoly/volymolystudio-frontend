@@ -61,6 +61,8 @@ async function request(path, options = {}, csrfRetry = false) {
     const error = new Error(payload.message || "Request failed.");
     error.status = response.status;
     error.errors = payload.errors || {};
+    error.restartLogin = payload.restart_login === true;
+    error.retryAfter = Number(response.headers.get("retry-after") || payload.retry_after || 0);
     throw error;
   }
 
@@ -68,11 +70,27 @@ async function request(path, options = {}, csrfRetry = false) {
 }
 
 export const authApi = {
+  startGoogleLogin: () => window.location.assign("/api/auth/google/redirect"),
+
+  linkGoogle: (password) =>
+    request("/api/auth/google/link", {
+      method: "POST",
+      body: JSON.stringify({ password }),
+    }),
+
   login: (email, password) =>
     request("/api/auth/login", {
       method: "POST",
       body: JSON.stringify({ email, password }),
     }),
+
+  verifyLoginCode: (code) =>
+    request("/api/auth/login/verify", {
+      method: "POST",
+      body: JSON.stringify({ code }),
+    }),
+
+  resendLoginCode: () => request("/api/auth/login/resend", { method: "POST" }),
 
   me: () => request("/api/auth/me"),
 
