@@ -376,9 +376,9 @@ input {
 .resend-copy {
   margin: 0;
   color: var(--input-default);
-  font-size: 12px;
+  font-size: 14px;
   font-weight: 500;
-  line-height: 16px;
+  line-height: 20px;
 }
 
 .text-link,
@@ -610,10 +610,10 @@ input {
 
 .recovery-copy {
   margin: 0;
-  color: var(--login-secondary-text);
-  font-size: 12px;
-  font-weight: 400;
-  line-height: 16px;
+  color: var(--input-default);
+  font-size: 14px;
+  font-weight: 500;
+  line-height: 20px;
 }
 
 .recover-form {
@@ -647,6 +647,11 @@ input {
 .notice-error {
   background: #ffe0de;
   color: #b42318;
+}
+
+.notice-warning {
+  background: #fef0c7;
+  color: #b54708;
 }
 
 .notice-icon,

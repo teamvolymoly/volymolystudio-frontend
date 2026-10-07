@@ -12,8 +12,12 @@ const SCREEN_NAMES = new Set([
   "google-link",
   "email-error",
   "verify",
+  "incorrect-code",
+  "new-code-sent",
   "password",
   "incorrect-password",
+  "account-exists-google",
+  "google-account-not-found",
   "forgot-password",
   "link-sent",
   "recover-account",
@@ -265,22 +269,30 @@ function GoogleScreen() {
   return (
     <div className="screen-content message-screen google-screen">
       <h1>Redirecting to Google</h1>
-      <p>Continue to securely sign in with your Google account.</p>
-      <button className="primary-button" onClick={() => authApi.startGoogleLogin()} type="button">Continue with Google</button>
+      <p>This will only take a moment......</p>
     </div>
   );
 }
 
-function VerifyScreen({ email, purpose = "registration", requestId, goTo, onVerifyCode, onSendVerification }) {
+function VerifyScreen({
+  email,
+  purpose = "registration",
+  requestId,
+  goTo,
+  onVerifyCode,
+  onSendVerification,
+  initialError = "",
+  initialCodeSent = false,
+}) {
   const router = useRouter();
   const busy = useRef(false);
   const focusFirstInput = useRef(false);
   const [restartRequired, setRestartRequired] = useState(false);
   const [digits, setDigits] = useState(["", "", "", "", "", ""]);
-  const [errorMessage, setErrorMessage] = useState("");
+  const [errorMessage, setErrorMessage] = useState(initialError);
   const [loading, setLoading] = useState(false);
   const [resending, setResending] = useState(false);
-  const [codeSent, setCodeSent] = useState(false);
+  const [codeSent, setCodeSent] = useState(initialCodeSent);
   const [resendWait, startResendCooldown] = useResendCooldown();
   const inputs = useRef([]);
   const completeCode = digits.every((digit) => /^\d$/.test(digit));
@@ -503,7 +515,6 @@ function ForgotPasswordScreen({ email, goTo, onForgotPassword, state }) {
   const [resendWait, startCooldown] = useResendCooldown();
   const busy = useRef(false);
   const expired = state === "expired";
-  const sent = state === "sent";
 
   async function sendResetLink(event) {
     event.preventDefault();
@@ -533,17 +544,22 @@ function ForgotPasswordScreen({ email, goTo, onForgotPassword, state }) {
 
   return (
     <div className="screen-content password-screen forgot-screen">
-      <LoginHeader title={expired ? "Reset link expired" : "Reset your password"} />
+      <LoginHeader
+        subtitle={
+          expired
+            ? "Continue to volymoly"
+            : <>We’ll email instructions to {targetEmail || "your email"}<br />on how to reset it</>
+        }
+        title={expired ? "Log in" : "Forgot your password?"}
+      />
       <div className="password-body">
-        {noticeVisible && (expired || sent) ? (
-          <Notice tone={expired ? "error" : "success"} onDismiss={() => setNoticeVisible(false)}>
-            {expired
-              ? "This reset link is invalid or expired. Request a new link below."
-              : "If an account exists for this email, a reset link will arrive shortly."}
+        {noticeVisible && expired ? (
+          <Notice tone="error" onDismiss={() => setNoticeVisible(false)}>
+            Link expired. Enter your email below to receive a new reset link.
           </Notice>
         ) : null}
         <form className="stacked-form" onSubmit={sendResetLink}>
-          {expired || !email ? (
+          {!email ? (
             <TextField label="Email" autoComplete="email" value={targetEmail}
               onChange={(event) => { setTargetEmail(event.target.value); setErrorMessage(""); }}
               placeholder="Enter your account email" />
@@ -552,10 +568,7 @@ function ForgotPasswordScreen({ email, goTo, onForgotPassword, state }) {
           )}
           {errorMessage ? <p className="field-error" role="alert"><AlertIcon />{errorMessage}</p> : null}
           <button className="primary-button" disabled={loading || resendWait > 0} type="submit">
-            {loading ? "Sending..." : resendWait > 0 ? "Please wait " + resendWait + "s" : sent ? "Resend reset link" : expired ? "Send new reset link" : "Email password reset"}
-          </button>
-          <button className="text-link back-link" disabled={loading} onClick={() => goTo("password", { email: targetEmail.trim() })} type="button">
-            Back to login
+            {loading ? "Sending..." : resendWait > 0 ? "Please wait " + resendWait + "s" : "Email password reset"}
           </button>
           <p className="recovery-copy">
             Lost access to email?{" "}
@@ -633,12 +646,8 @@ function RecoverAccountScreen({ goTo, onStartRecovery, forceError = false }) {
           value={newEmail}
         />
         <button className="primary-button" disabled={loading} type="submit">
-          {loading ? "Sending..." : "Continue with email"}
+          {loading ? "Sending..." : "Continue"}
         </button>
-        <p className="signup-copy">
-          New to volymoly?{" "}
-          <button className="text-link accent" disabled={loading} onClick={() => goTo("verify")} type="button">Get Started</button>
-        </p>
       </form>
     </div>
   );
@@ -717,12 +726,12 @@ function ResetPasswordScreen({ email, token, goTo, onResetPassword, showError = 
             setConfirmPassword(event.target.value);
             setErrorMessage("");
           }}
-          placeholder="Confirm your new password"
+          placeholder="Enter your personal or work email"
           type="password"
           value={confirmPassword}
         />
         <button className="primary-button" disabled={loading} type="submit">
-          {loading ? "Saving..." : "Log in"}
+          {loading ? "Saving..." : "Reset password"}
         </button>
       </form>
     </div>
@@ -771,14 +780,42 @@ function Screen({
           requestId={verification.requestId}
         />
       );
+    case "incorrect-code":
+      return (
+        <VerifyScreen
+          email={verification.email || email}
+          goTo={goTo}
+          initialError="Incorrect code"
+          onSendVerification={onSendVerification}
+          onVerifyCode={onVerifyCode}
+          purpose={verification.purpose}
+          requestId={verification.requestId}
+        />
+      );
+    case "new-code-sent":
+      return (
+        <VerifyScreen
+          email={verification.email || email}
+          goTo={goTo}
+          initialCodeSent
+          onSendVerification={onSendVerification}
+          onVerifyCode={onVerifyCode}
+          purpose={verification.purpose}
+          requestId={verification.requestId}
+        />
+      );
     case "password":
       return <PasswordScreen email={email} goTo={goTo} onLogin={onLogin} />;
     case "incorrect-password":
       return <PasswordScreen email={email} goTo={goTo} invalid onLogin={onLogin} />;
+    case "account-exists-google":
+      return <PasswordScreen email={email} goTo={goTo} onLogin={onLogin} notice={{ message: "An account with this email already exists, and is not connected to Google.", tone: "warning" }} />;
+    case "google-account-not-found":
+      return <PasswordScreen email={email} goTo={goTo} onLogin={onLogin} notice={{ message: "We couldn’t find a volymoly account connected to your Google account.", tone: "error" }} />;
     case "forgot-password":
       return <ForgotPasswordScreen email={email} goTo={goTo} onForgotPassword={onForgotPassword} />;
     case "link-sent":
-      return <ForgotPasswordScreen email={email} goTo={goTo} onForgotPassword={onForgotPassword} state="sent" />;
+      return <PasswordScreen email={email} goTo={goTo} onLogin={onLogin} notice={{ message: "A link to reset your password has been emailed to you.", tone: "success" }} />;
     case "recover-account":
       return <RecoverAccountScreen goTo={goTo} onStartRecovery={onStartRecovery} />;
     case "recover-account-error":
@@ -821,7 +858,7 @@ export default function Home() {
       setResetEmail(queryEmail);
     }
     if (queryToken) setResetToken(queryToken);
-    if (requested === "verify") {
+    if (["verify", "incorrect-code", "new-code-sent"].includes(requested)) {
       setVerification({
         email: queryEmail,
         purpose: params.get("purpose") || "registration",
