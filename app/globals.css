@@ -195,6 +195,12 @@ input {
   line-height: normal;
 }
 
+.google-button img {
+  position: relative;
+  left: 0.5px;
+  top: 0.5px;
+}
+
 .google-button:focus-visible,
 .primary-button:focus-visible,
 .text-link:focus-visible,
@@ -349,6 +355,8 @@ input {
   font-size: 14px;
   font-weight: 500;
   line-height: 20px;
+  text-box-edge: cap alphabetic;
+  text-box-trim: trim-both;
 }
 
 .text-link,
@@ -580,6 +588,8 @@ input {
   font-size: 14px;
   font-weight: 500;
   line-height: 20px;
+  text-box-edge: cap alphabetic;
+  text-box-trim: trim-both;
 }
 
 .recover-form {

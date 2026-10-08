@@ -191,6 +191,10 @@ function LoginScreen({ email, setEmail, goTo, onSendVerification, forceError = f
   const [errorMessage, setErrorMessage] = useState("");
   const [loading, setLoading] = useState(false);
 
+  useEffect(() => {
+    if (forceError) setShowError(true);
+  }, [forceError]);
+
   function continueWithEmail(event) {
     event.preventDefault();
     const valid = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
@@ -385,7 +389,7 @@ function VerifyScreen({
   return (
     <div className="screen-content verify-screen">
       <header className="intro centered">
-        <h1>Verify your email to continue</h1>
+        <h1>{purpose === "account_recovery" ? "Verify your account to continue" : "Verify your email to continue"}</h1>
         <p>For added security, enter the 6 digit code sent to<span className="verification-email">{email}</span></p>
       </header>
       <form className="otp-section" onSubmit={(event) => {
