@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { authApi } from "./lib/auth-api";
 import { isValidEmail } from "./lib/email-validation";
-import { GoogleLinkScreen, GoogleErrorNotice } from "./components/google-auth";
+import { GoogleErrorNotice } from "./components/google-auth";
 
 const SCREEN_NAMES = new Set([
   "login",
@@ -250,7 +250,7 @@ function LoginScreen({ email, setEmail, goTo, onSendVerification, forceError = f
 
       <form className="login-form" noValidate onSubmit={continueWithEmail}>
         <div className="social-group">
-          <button className="google-button" onClick={() => authApi.startGoogleLogin()} type="button">
+          <button className="google-button" onClick={() => goTo("google")} type="button">
             <Image alt="" height={20} src="/google-logo.svg" width={20} />
             <span>Continue with Google</span>
           </button>
@@ -290,8 +290,18 @@ function LoginScreen({ email, setEmail, goTo, onSendVerification, forceError = f
 }
 
 function GoogleScreen() {
+  useEffect(() => {
+    // Keep the Figma redirect state visible for a paint, then hand the browser
+    // to Laravel's stateful OAuth endpoint. Clearing the temporary query first
+    // prevents the Back button from starting Google sign-in again.
+    window.history.replaceState({}, "", window.location.pathname);
+    const redirectTimer = window.setTimeout(() => authApi.startGoogleLogin(), 100);
+
+    return () => window.clearTimeout(redirectTimer);
+  }, []);
+
   return (
-    <div className="screen-content message-screen google-screen">
+    <div aria-live="polite" className="screen-content message-screen google-screen" role="status">
       <h1>Redirecting to Google</h1>
       <p>This will only take a moment......</p>
     </div>
@@ -532,6 +542,94 @@ function PasswordScreen({ email, goTo, onLogin, invalid = false, notice }) {
             Forgot password?
           </button>
           <button className="primary-button" disabled={loading} type="submit">
+            {loading ? "Logging in..." : "Log in"}
+          </button>
+        </form>
+      </div>
+    </div>
+  );
+}
+
+function GoogleLinkScreen({ fallbackEmail, goTo }) {
+  const router = useRouter();
+  const [email, setEmail] = useState(fallbackEmail);
+  const [password, setPassword] = useState("");
+  const [showRequired, setShowRequired] = useState(false);
+  const [showNotice, setShowNotice] = useState(true);
+  const [errorMessage, setErrorMessage] = useState("");
+  const [checkingSession, setCheckingSession] = useState(!fallbackEmail);
+  const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    let active = true;
+
+    authApi.googleLinkContext()
+      .then((result) => {
+        if (active) setEmail(result.email || fallbackEmail);
+      })
+      .catch((error) => {
+        if (active && !fallbackEmail) {
+          setErrorMessage(error.message || "This Google linking request expired. Please start Google login again.");
+        }
+      })
+      .finally(() => {
+        if (active) setCheckingSession(false);
+      });
+
+    return () => {
+      active = false;
+    };
+  }, [fallbackEmail]);
+
+  async function linkAccount(event) {
+    event.preventDefault();
+    if (loading || checkingSession) return;
+    if (!password.trim()) {
+      setShowRequired(true);
+      return;
+    }
+
+    setLoading(true);
+    setErrorMessage("");
+
+    try {
+      await authApi.linkGoogle(password);
+      router.replace("/dashboard");
+    } catch (error) {
+      setErrorMessage(error.errors?.password?.[0] || error.message || "Unable to link your Google account.");
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  return (
+    <div className="screen-content password-screen with-notice">
+      <LoginHeader />
+      <div className="password-body">
+        {showNotice ? (
+          <Notice onDismiss={() => setShowNotice(false)} tone="warning">
+            An account with this email already exists, and is not connected to Google.
+          </Notice>
+        ) : null}
+        <form className="stacked-form" onSubmit={linkAccount}>
+          <EmailSummary email={email} onChangeEmail={() => goTo("login", { email: "" })} />
+          <TextField
+            autoComplete="current-password"
+            error={errorMessage || (showRequired ? "Enter your password" : "")}
+            label="Password"
+            onChange={(event) => {
+              setPassword(event.target.value);
+              setShowRequired(false);
+              setErrorMessage("");
+            }}
+            placeholder="Enter your password"
+            type="password"
+            value={password}
+          />
+          <button className="forgot-link" onClick={() => goTo("forgot-password", { email })} type="button">
+            Forgot password?
+          </button>
+          <button className="primary-button" disabled={loading || checkingSession} type="submit">
             {loading ? "Logging in..." : "Log in"}
           </button>
         </form>
@@ -813,7 +911,7 @@ function Screen({
     case "google":
       return <GoogleScreen />;
     case "google-link":
-      return <GoogleLinkScreen onCancel={() => goTo("login")} />;
+      return <GoogleLinkScreen fallbackEmail={email} goTo={goTo} />;
     case "email-error":
       return <LoginScreen email={email} forceError goTo={goTo} onSendVerification={onSendVerification} setEmail={setEmail} />;
     case "verify":
@@ -856,7 +954,7 @@ function Screen({
     case "incorrect-password":
       return <PasswordScreen email={email} goTo={goTo} invalid onLogin={onLogin} />;
     case "account-exists-google":
-      return <PasswordScreen email={email} goTo={goTo} onLogin={onLogin} notice={{ message: "An account with this email already exists, and is not connected to Google.", tone: "warning" }} />;
+      return <GoogleLinkScreen fallbackEmail={email} goTo={goTo} />;
     case "google-account-not-found":
       return <PasswordScreen email={email} goTo={goTo} onLogin={onLogin} notice={{ message: "we couldn’t find a volymoly account connected to your google account.", tone: "error" }} />;
     case "forgot-password":

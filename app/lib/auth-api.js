@@ -72,6 +72,8 @@ async function request(path, options = {}, csrfRetry = false) {
 export const authApi = {
   startGoogleLogin: () => window.location.assign("/api/auth/google/redirect"),
 
+  googleLinkContext: () => request("/api/auth/google/link-context"),
+
   linkGoogle: (password) =>
     request("/api/auth/google/link", {
       method: "POST",

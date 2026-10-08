@@ -19,6 +19,7 @@ const METHODS = new Map([
   ["csrf-token", "GET"],
   ["google/redirect", "GET"],
   ["google/callback", "GET"],
+  ["google/link-context", "GET"],
   ["google/link", "POST"],
   ["login", "POST"],
   ["login/verify", "POST"],

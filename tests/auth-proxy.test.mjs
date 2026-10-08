@@ -174,6 +174,21 @@ test("Google linking is a CSRF-protected POST through Laravel", async () => {
   assert.equal(wrongMethod.status, 404);
 });
 
+test("Google linking context comes from the pending Laravel session", async () => {
+  globalThis.fetch = async (url, options) => {
+    assert.equal(url.pathname, "/api/auth/google/link-context");
+    assert.equal(options.method, "GET");
+    assert.equal(options.headers.get("cookie"), "laravel_session=pending-link");
+    return Response.json({ email: "google@example.test" });
+  };
+  const request = new Request("https://volymolystudio-frontend.vercel.app/api/auth/google/link-context", {
+    headers: { Cookie: "laravel_session=pending-link" },
+  });
+  const response = await GET(request, { params: Promise.resolve({ path: ["google", "link-context"] }) });
+  assert.equal(response.status, 200);
+  assert.deepEqual(await response.json(), { email: "google@example.test" });
+});
+
 test("local development targets the local Laravel API", async () => {
   const previousEnvironment = process.env.NODE_ENV;
   const previousUpstream = process.env.API_UPSTREAM_URL;
