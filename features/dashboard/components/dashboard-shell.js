@@ -1,9 +1,9 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
-import { authApi } from "../lib/auth-api";
-import styles from "./dashboard.module.css";
+import { useEffect, useRef, useState } from "react";
+import { authApi } from "../../auth/services/auth-api";
+import styles from "./dashboard-shell.module.css";
 
 const primaryItems = [
   { label: "Home", icon: "home" },
@@ -38,9 +38,9 @@ function Icon({ name, small = false }) {
   );
 }
 
-function NavigationItem({ icon = "home", label, onClick }) {
+function NavigationItem({ disabled = false, icon = "home", label, onClick }) {
   return (
-    <button className={styles.navigationItem} onClick={onClick} type="button">
+    <button className={styles.navigationItem} disabled={disabled} onClick={onClick} type="button">
       <Icon name={icon} />
       <span>{label}</span>
     </button>
@@ -59,11 +59,14 @@ function SalesChannel({ label }) {
   );
 }
 
-export default function DashboardPage() {
+export default function DashboardShell() {
   const router = useRouter();
   const [collapsed, setCollapsed] = useState(false);
   const [activeItem, setActiveItem] = useState("Home");
   const [checkingAuth, setCheckingAuth] = useState(true);
+  const [loggingOut, setLoggingOut] = useState(false);
+  const [logoutError, setLogoutError] = useState("");
+  const logoutBusy = useRef(false);
 
   useEffect(() => {
     let active = true;
@@ -80,6 +83,25 @@ export default function DashboardPage() {
       active = false;
     };
   }, [router]);
+
+  async function logout() {
+    if (logoutBusy.current) return;
+
+    logoutBusy.current = true;
+    setLoggingOut(true);
+    setLogoutError("");
+
+    try {
+      await authApi.logout();
+      router.replace("/");
+      router.refresh();
+    } catch (error) {
+      setLogoutError(error.message || "We could not log you out. Please try again.");
+    } finally {
+      logoutBusy.current = false;
+      setLoggingOut(false);
+    }
+  }
 
   if (checkingAuth) return null;
 
@@ -116,11 +138,18 @@ export default function DashboardPage() {
             {bottomItems.map((label) => (
               <NavigationItem key={label} label={label} onClick={() => setActiveItem(label)} />
             ))}
+            <NavigationItem
+              disabled={loggingOut}
+              label={loggingOut ? "Logging out..." : "Log out"}
+              onClick={logout}
+            />
           </nav>
         </div>
       </aside>
 
-      <section aria-label={`${activeItem} content`} className={styles.mainContainer} />
+      <section aria-label={`${activeItem} content`} className={styles.mainContainer}>
+        {logoutError ? <p className={styles.logoutError} role="alert">{logoutError}</p> : null}
+      </section>
     </main>
   );
 }

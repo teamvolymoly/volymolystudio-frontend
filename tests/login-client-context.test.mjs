@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { createHmac } from "node:crypto";
 import { afterEach, test } from "node:test";
-import { loginClientHeaders } from "../app/lib/login-client-context.js";
+import { loginClientHeaders } from "../lib/server/login-client-context.js";
 import { GET, POST } from "../app/api/auth/[...path]/route.js";
 
 const originalFetch = globalThis.fetch;

@@ -63,6 +63,7 @@ async function request(path, options = {}, csrfRetry = false) {
     error.errors = payload.errors || {};
     error.restartLogin = payload.restart_login === true;
     error.retryAfter = Number(response.headers.get("retry-after") || payload.retry_after || 0);
+    error.requestId = response.headers.get("x-request-id") || "";
     throw error;
   }
 

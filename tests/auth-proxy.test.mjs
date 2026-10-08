@@ -34,6 +34,7 @@ test("CSRF session cookies stay on the frontend origin", async () => {
   assert.equal(response.status, 200);
   assert.deepEqual(await response.json(), { token: "csrf-token" });
   assert.equal(response.headers.get("cache-control"), "no-store");
+  assert.match(response.headers.get("x-request-id"), /^[0-9a-f-]{36}$/);
   const cookies = response.headers.getSetCookie();
   assert.equal(cookies.length, 2);
   for (const cookie of cookies) {
@@ -275,8 +276,10 @@ test("backend mail/queue failure does not expose debug output or report success"
 test("production refuses localhost and insecure upstreams without sending session cookies", async () => {
   const previousEnvironment = process.env.NODE_ENV;
   const previousUpstream = process.env.API_UPSTREAM_URL;
+  const previousSecret = process.env.AUTH_PROXY_SECRET;
   try {
     process.env.NODE_ENV = 'production';
+    process.env.AUTH_PROXY_SECRET = 'phase-3-test-secret-that-is-at-least-32-characters';
     let upstreamCalls = 0;
     globalThis.fetch = () => { upstreamCalls++; throw new Error('Upstream must not be contacted'); };
     for (const upstream of ['http://localhost:8000', 'https://localhost', 'https://127.0.0.1', 'http://volymoly.com', 'https://user:secret@volymoly.com']) {
@@ -291,5 +294,33 @@ test("production refuses localhost and insecure upstreams without sending sessio
   } finally {
     if (previousEnvironment === undefined) delete process.env.NODE_ENV; else process.env.NODE_ENV = previousEnvironment;
     if (previousUpstream === undefined) delete process.env.API_UPSTREAM_URL; else process.env.API_UPSTREAM_URL = previousUpstream;
+    if (previousSecret === undefined) delete process.env.AUTH_PROXY_SECRET; else process.env.AUTH_PROXY_SECRET = previousSecret;
+  }
+});
+
+test("production refuses to proxy authentication without a strong signing secret", async () => {
+  const previousEnvironment = process.env.NODE_ENV;
+  const previousSecret = process.env.AUTH_PROXY_SECRET;
+  try {
+    process.env.NODE_ENV = "production";
+    delete process.env.AUTH_PROXY_SECRET;
+    let upstreamCalls = 0;
+    globalThis.fetch = () => {
+      upstreamCalls++;
+      throw new Error("Upstream must not be contacted");
+    };
+
+    const response = await GET(new Request("https://studio.example/api/auth/me", {
+      headers: { Cookie: "laravel_session=private" },
+    }), { params: Promise.resolve({ path: ["me"] }) });
+
+    assert.equal(response.status, 502);
+    assert.equal(response.headers.get("cache-control"), "no-store");
+    assert.match(response.headers.get("x-request-id"), /^[0-9a-f-]{36}$/);
+    assert.doesNotMatch(await response.text(), /secret|configuration/i);
+    assert.equal(upstreamCalls, 0);
+  } finally {
+    if (previousEnvironment === undefined) delete process.env.NODE_ENV; else process.env.NODE_ENV = previousEnvironment;
+    if (previousSecret === undefined) delete process.env.AUTH_PROXY_SECRET; else process.env.AUTH_PROXY_SECRET = previousSecret;
   }
 });

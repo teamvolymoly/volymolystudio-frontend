@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import { isValidEmail } from "../app/lib/email-validation.js";
+import { isValidEmail } from "../features/auth/validation/email.js";
 
 test("email validation follows Laravel's login contract for common addresses", () => {
   for (const email of ["user@example.com", "USER+tag@sub.example.co.in", "a@b", "a@b.c"]) {
