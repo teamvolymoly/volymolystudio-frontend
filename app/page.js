@@ -4,6 +4,7 @@ import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { authApi } from "./lib/auth-api";
+import { isValidEmail } from "./lib/email-validation";
 import { GoogleLinkScreen, GoogleErrorNotice } from "./components/google-auth";
 
 const SCREEN_NAMES = new Set([
@@ -110,19 +111,21 @@ function TextField({
   type = "text",
   error,
   helper,
-  autoComplete
+  autoComplete,
+  inputMode,
 }) {
   const [visible, setVisible] = useState(false);
   const isPassword = type === "password";
   const inputType = isPassword && visible ? "text" : type;
 
   return (
-    <label className="field-block">
+    <label className={`field-block${error ? " field-block-error" : ""}`}>
       <span className="field-label">{label}</span>
       <span className={`input-wrap${error ? " has-error" : ""}`}>
         <input
           aria-invalid={Boolean(error)}
           autoComplete={autoComplete}
+          inputMode={inputMode}
           onChange={onChange}
           placeholder={placeholder}
           type={inputType}
@@ -142,7 +145,7 @@ function TextField({
       {error ? (
         <span className="field-error" role="alert">
           <AlertIcon />
-          {error}
+          <span className="field-error-text">{error}</span>
         </span>
       ) : null}
       {helper ? <span className="field-helper">{helper}</span> : null}
@@ -197,18 +200,19 @@ function LoginScreen({ email, setEmail, goTo, onSendVerification, forceError = f
 
   function continueWithEmail(event) {
     event.preventDefault();
-    const valid = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
-    if (!valid) {
+    if (!isValidEmail(email)) {
       setShowError(true);
+      setErrorMessage("Enter a valid email address");
       return;
     }
+    setShowError(false);
+    setErrorMessage("");
     goTo("password");
   }
 
   async function startRegistration(event) {
     event.preventDefault();
-    const valid = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
-    if (!valid) {
+    if (!isValidEmail(email)) {
       setShowError(true);
       setErrorMessage("Enter a valid email address");
       return;
@@ -229,7 +233,7 @@ function LoginScreen({ email, setEmail, goTo, onSendVerification, forceError = f
       });
     } catch (error) {
       setShowError(true);
-      setErrorMessage(error.message || "We could not send a verification code.");
+      setErrorMessage(error.errors?.email ? "Enter a valid email address" : error.message || "We could not send a verification code.");
     } finally {
       setLoading(false);
     }
@@ -242,7 +246,7 @@ function LoginScreen({ email, setEmail, goTo, onSendVerification, forceError = f
         <p>Manage your entire business in one place</p>
       </header>
 
-      <form className="login-form" onSubmit={continueWithEmail}>
+      <form className="login-form" noValidate onSubmit={continueWithEmail}>
         <div className="social-group">
           <button className="google-button" onClick={() => authApi.startGoogleLogin()} type="button">
             <Image alt="" height={20} src="/google-logo.svg" width={20} />
@@ -255,12 +259,19 @@ function LoginScreen({ email, setEmail, goTo, onSendVerification, forceError = f
           <TextField
             autoComplete="email"
             error={showError ? errorMessage || "Enter a valid email address" : ""}
+            inputMode="email"
             label="Email"
             onChange={(event) => {
-              setEmail(event.target.value);
-              setShowError(false);
+              const nextEmail = event.target.value;
+              setEmail(nextEmail);
+              if (showError) {
+                const valid = isValidEmail(nextEmail);
+                setShowError(!valid);
+                if (valid) setErrorMessage("");
+              }
             }}
             placeholder="Enter your personal or work email"
+            type="email"
             value={email}
           />
           <button className="primary-button" type="submit">Continue with email</button>
@@ -425,7 +436,12 @@ function VerifyScreen({
             />
           ))}
         </div>
-        {errorMessage ? <p className="field-error" id="otp-error" role="alert"><AlertIcon />{errorMessage}</p> : null}
+        {errorMessage ? (
+          <p className="field-error" id="otp-error" role="alert">
+            <AlertIcon />
+            <span className="field-error-text">{errorMessage}</span>
+          </p>
+        ) : null}
         <button className="primary-button otp-verify-button" disabled={!completeCode || !email || loading || resending || restartRequired} type="submit">
           {loading ? "Verifying..." : "Verify"}
         </button>
@@ -486,7 +502,11 @@ function PasswordScreen({ email, goTo, onLogin, invalid = false, notice }) {
                 verification: { email: result.email || email, purpose: "login", requestId: "" },
               });
             } catch (error) {
-              setErrorMessage(error.message || "Incorrect Password");
+              if (error.errors?.email) {
+                goTo("email-error");
+                return;
+              }
+              setErrorMessage(error.status === 401 ? "Incorrect Password" : (error.message || "Incorrect Password"));
             } finally {
               setLoading(false);
             }
@@ -667,7 +687,10 @@ function RecoverAccountScreen({ goTo, onStartRecovery, forceError = false }) {
 function ResetPasswordScreen({ email, token, goTo, onResetPassword, showError = false }) {
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
-  const [errorMessage, setErrorMessage] = useState("");
+  const [errorMessage, setErrorMessage] = useState(
+    showError ? "Password is too short (minimum is 8 characters)" : "",
+  );
+  const [confirmError, setConfirmError] = useState("");
   const [loading, setLoading] = useState(false);
   const resetEmail = email;
 
@@ -682,12 +705,20 @@ function ResetPasswordScreen({ email, token, goTo, onResetPassword, showError = 
         onSubmit={(event) => {
           event.preventDefault();
           if (password.length < 8) {
-            goTo("password-too-short", { resetEmail, resetToken: token });
+            setErrorMessage("Password is too short (minimum is 8 characters)");
+            setConfirmError("");
+            return;
+          }
+
+          if (password.trim() !== password) {
+            setErrorMessage("The password cannot begin or end with a space.");
+            setConfirmError("");
             return;
           }
 
           if (password !== confirmPassword) {
-            setErrorMessage("Passwords do not match");
+            setErrorMessage("");
+            setConfirmError("Passwords do not match");
             return;
           }
 
@@ -698,6 +729,7 @@ function ResetPasswordScreen({ email, token, goTo, onResetPassword, showError = 
 
           setLoading(true);
           setErrorMessage("");
+          setConfirmError("");
 
           onResetPassword({
             email: resetEmail,
@@ -719,7 +751,7 @@ function ResetPasswordScreen({ email, token, goTo, onResetPassword, showError = 
       >
         <TextField
           autoComplete="new-password"
-          error={errorMessage || (showError ? "Password is too short (minimum is 8 characters)" : "")}
+          error={errorMessage}
           helper="Your password must be at least 8 characters, and can’t begin or end with a space."
           label="New password"
           onChange={(event) => {
@@ -732,10 +764,11 @@ function ResetPasswordScreen({ email, token, goTo, onResetPassword, showError = 
         />
         <TextField
           autoComplete="new-password"
+          error={confirmError}
           label="Confirm new password"
           onChange={(event) => {
             setConfirmPassword(event.target.value);
-            setErrorMessage("");
+            setConfirmError("");
           }}
           placeholder="Enter your personal or work email"
           type="password"

@@ -34,6 +34,7 @@
   --email-background: #141414;
   --email-default: #bfbfbf;
   --highlight: #d43022;
+  --alert-default: #b42318;
   --radius-default: 8px;
   --radius-lg: 12px;
 }
@@ -125,7 +126,7 @@ input {
 
 .hero-panel img {
   object-fit: cover;
-  object-position: center;
+  object-position: 61% center;
 }
 
 .screen-content {
@@ -309,10 +310,34 @@ input {
   display: flex;
   align-items: center;
   gap: 4px;
-  color: var(--highlight);
+  color: var(--alert-default);
   font-size: 14px;
   font-weight: 500;
   line-height: 20px;
+}
+
+.login-content .field-block-error {
+  gap: 0;
+}
+
+.login-content .field-block-error .field-label {
+  margin-bottom: 8px;
+}
+
+.login-content .field-error {
+  height: 31px;
+  min-height: 31px;
+  gap: 0;
+}
+
+.login-content .field-error-text {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 10px 4px;
+  line-height: 11px;
+  text-box-edge: cap alphabetic;
+  text-box-trim: trim-both;
 }
 
 .alert-icon {
@@ -472,6 +497,23 @@ input {
   line-height: 20px;
 }
 
+.verify-screen .field-error {
+  height: 31px;
+  min-height: 31px;
+  margin: 0;
+  gap: 0;
+}
+
+.verify-screen .field-error-text {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 10px 4px;
+  line-height: 11px;
+  text-box-edge: cap alphabetic;
+  text-box-trim: trim-both;
+}
+
 .verify-screen .text-link:disabled {
   cursor: not-allowed;
   opacity: 0.6;
@@ -526,7 +568,7 @@ input {
 }
 
 .reset-screen {
-  gap: 56px;
+  gap: 64px;
 }
 
 .reset-screen .intro {
@@ -541,7 +583,15 @@ input {
 }
 
 .reset-form {
-  gap: 16px;
+  gap: 0;
+}
+
+.reset-form > .field-block + .field-block {
+  margin-top: 8px;
+}
+
+.reset-form > .primary-button {
+  margin-top: 16px;
 }
 
 .email-summary {
