@@ -33,8 +33,14 @@
   --input-border: #8c8c8c;
   --email-background: #141414;
   --email-default: #bfbfbf;
+  --button-hover: #454545;
+  --button-hover-text: #f0f0f0;
+  --button-selected: #000000;
+  --button-selected-text: #ffffff;
   --highlight: #d43022;
+  --highlight-hover: #801d14;
   --alert-default: #b42318;
+  --input-active: #f0f0f0;
   --radius-default: 8px;
   --radius-lg: 12px;
 }
@@ -253,11 +259,14 @@ input {
   border: 1px solid var(--input-border);
   border-radius: var(--radius-default);
   background: var(--input-background);
+  transition: border-color 300ms ease-in-out, background-color 300ms ease-in-out,
+    box-shadow 300ms ease-in-out;
 }
 
 .input-wrap:focus-within {
-  border-color: #454545;
-  box-shadow: 0 0 0 1px #454545;
+  border-color: var(--input-border);
+  background: var(--input-active);
+  box-shadow: none;
 }
 
 .input-wrap.has-error {
@@ -282,6 +291,10 @@ input {
   padding-right: 12px;
 }
 
+.input-wrap.no-trailing-action input {
+  padding-right: 12px;
+}
+
 .input-wrap input::placeholder {
   color: var(--input-placeholder);
   opacity: 1;
@@ -298,6 +311,11 @@ input {
   background: transparent;
   cursor: pointer;
   place-items: center;
+}
+
+.icon-button:hover,
+.notice-close:hover {
+  background: transparent;
 }
 
 .eye-icon {
@@ -371,6 +389,22 @@ input {
   font-size: 16px;
   font-weight: 500;
   line-height: 24px;
+  transition: background-color 300ms ease-in-out, color 300ms ease-in-out;
+}
+
+.primary-button:not(:disabled):hover {
+  background: var(--button-hover);
+  color: var(--button-hover-text);
+}
+
+.primary-button:not(:disabled):active {
+  background: var(--button-selected);
+  color: var(--button-selected-text);
+}
+
+.primary-button:disabled {
+  cursor: not-allowed;
+  transform: none;
 }
 
 .signup-copy,
@@ -396,10 +430,17 @@ input {
   line-height: inherit;
   text-decoration: underline;
   text-underline-offset: 1px;
+  transition: color 300ms ease-in-out;
 }
 
 .accent {
   color: var(--highlight);
+}
+
+.text-link.accent:not(:disabled):hover,
+.email-summary .text-link:hover,
+.forgot-link:hover {
+  color: var(--highlight-hover);
 }
 
 .forgot-link {
@@ -540,8 +581,9 @@ input {
 }
 
 .otp-row input:focus {
-  border-color: var(--input-default);
-  box-shadow: 0 0 0 1px var(--input-default);
+  border-color: var(--input-border);
+  background: var(--input-active);
+  box-shadow: none;
 }
 
 .resend-copy {
@@ -580,6 +622,32 @@ input {
 .reset-screen .field-helper {
   text-box-edge: cap alphabetic;
   text-box-trim: trim-both;
+}
+
+.reset-screen .field-block-error {
+  gap: 0;
+}
+
+.reset-screen .field-block-error .field-label {
+  margin-bottom: 8px;
+}
+
+.reset-screen .field-block-error .field-error {
+  height: 30px;
+  min-height: 30px;
+  gap: 0;
+}
+
+.reset-screen .field-block-error .field-error-text {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 10px 4px;
+  line-height: 10px;
+}
+
+.reset-screen .field-block-error .field-helper {
+  margin-top: 8px;
 }
 
 .reset-form {

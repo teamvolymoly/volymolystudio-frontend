@@ -51,13 +51,13 @@ function useResendCooldown() {
   return [remaining, startCooldown];
 }
 
-function EyeIcon() {
+function EyeIcon({ visible = false }) {
   return (
     <Image
       alt=""
       className="eye-icon"
       height={24}
-      src="/auth-icons/view-password.svg"
+      src={visible ? "/auth-icons/hide-password.svg" : "/auth-icons/view-password.svg"}
       width={24}
     />
   );
@@ -113,15 +113,17 @@ function TextField({
   helper,
   autoComplete,
   inputMode,
+  showPasswordToggle = true,
 }) {
   const [visible, setVisible] = useState(false);
   const isPassword = type === "password";
-  const inputType = isPassword && visible ? "text" : type;
+  const canTogglePassword = isPassword && showPasswordToggle;
+  const inputType = canTogglePassword && visible ? "text" : type;
 
   return (
     <label className={`field-block${error ? " field-block-error" : ""}`}>
       <span className="field-label">{label}</span>
-      <span className={`input-wrap${error ? " has-error" : ""}`}>
+      <span className={`input-wrap${error ? " has-error" : ""}${isPassword && !showPasswordToggle ? " no-trailing-action" : ""}`}>
         <input
           aria-invalid={Boolean(error)}
           autoComplete={autoComplete}
@@ -131,14 +133,14 @@ function TextField({
           type={inputType}
           value={value}
         />
-        {isPassword ? (
+        {canTogglePassword ? (
           <button
             aria-label={visible ? "Hide password" : "Show password"}
             className="icon-button"
             onClick={() => setVisible((current) => !current)}
             type="button"
           >
-            <EyeIcon />
+            <EyeIcon visible={visible} />
           </button>
         ) : null}
       </span>
@@ -771,6 +773,7 @@ function ResetPasswordScreen({ email, token, goTo, onResetPassword, showError = 
             setConfirmError("");
           }}
           placeholder="Enter your personal or work email"
+          showPasswordToggle={false}
           type="password"
           value={confirmPassword}
         />
