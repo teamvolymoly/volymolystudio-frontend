@@ -97,6 +97,17 @@ export const authApi = {
 
   me: () => request("/api/auth/me"),
 
+  loginActivity: (token) =>
+    request("/api/auth/security/activity", {
+      headers: { "X-Activity-Token": token },
+    }),
+
+  secureLoginActivity: (token) =>
+    request("/api/auth/security/secure", {
+      method: "POST",
+      body: JSON.stringify({ token }),
+    }),
+
   logout: () => request("/api/auth/logout", { method: "POST" }),
 
   sendVerificationCode: (email, purpose = "registration", requestId) =>

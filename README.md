@@ -59,6 +59,26 @@ URL while editing a short password, so refreshing does not lose the token.
 See the backend README for the SMTP and supervised queue worker requirements.
 
 
+## New-device activity and Secure My Account
+
+The public /security/activity page opens from the new-device email. New links
+carry the opaque review token in the URL fragment; legacy query links are moved
+there immediately. The page sends it to the proxy in a dedicated header and
+loads only the event's account, device, location, IP, time and secured state.
+Opening the page is read-only so email link scanners cannot sign users out.
+
+Secure My Account sends a separate CSRF-protected POST through the auth proxy.
+Laravel signs out every session, removes API tokens, invalidates pending login
+OTPs, rotates the remember token, revokes recognized browsers and resolves older
+alerts. Repeating the action is safe. The success screen sends the user into the
+existing password-reset flow as the recommended next step.
+
+Deploy the frontend page with the backend migration and secure endpoint. Then set
+LOGIN_ACTIVITY_REVIEW_PATH=/security/activity and enable
+NEW_DEVICE_ALERTS_ENABLED=true in Laravel only after the production queue worker
+and SMTP delivery are healthy.
+
+
 ### Deployment configuration safety
 
 Local development settings live in the ignored .env.development.local file. Do not

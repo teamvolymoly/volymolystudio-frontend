@@ -324,3 +324,31 @@ test("production refuses to proxy authentication without a strong signing secret
     if (previousSecret === undefined) delete process.env.AUTH_PROXY_SECRET; else process.env.AUTH_PROXY_SECRET = previousSecret;
   }
 });
+
+test("secure-account action is an allowlisted CSRF-protected POST", async () => {
+  const token = "a".repeat(64);
+  globalThis.fetch = async (url, options) => {
+    assert.equal(url.pathname, "/api/auth/security/secure");
+    assert.equal(options.method, "POST");
+    assert.equal(options.headers.get("cookie"), "laravel_session=review");
+    assert.equal(options.headers.get("x-csrf-token"), "review-csrf");
+    assert.deepEqual(JSON.parse(options.body), { token });
+    return Response.json({ secured: true, already_secured: false });
+  };
+
+  const request = new Request("https://frontend.example/api/auth/security/secure", {
+    method: "POST",
+    headers: {
+      Cookie: "laravel_session=review; private=omit",
+      "Content-Type": "application/json",
+      "X-CSRF-TOKEN": "review-csrf",
+    },
+    body: JSON.stringify({ token }),
+  });
+  const context = { params: Promise.resolve({ path: ["security", "secure"] }) };
+  const response = await POST(request, context);
+
+  assert.equal(response.status, 200);
+  assert.equal((await response.json()).secured, true);
+  assert.equal((await GET(new Request(request.url), context)).status, 404);
+});

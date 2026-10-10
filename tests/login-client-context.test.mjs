@@ -57,10 +57,11 @@ test("device cookie reaches successful login and remains HttpOnly on the fronten
 });
 
 test("activity review forwards only the opaque token and uses a read-only GET", async () => {
-  globalThis.fetch = async url => {
+  globalThis.fetch = async (url, options) => {
     assert.equal(url.pathname, "/api/auth/security/activity");
-    assert.equal(url.searchParams.get("token"), "opaque-token");
+    assert.equal(url.searchParams.has("token"), false);
     assert.equal(url.searchParams.has("user_id"), false);
+    assert.equal(options.headers.get("x-activity-token"), "opaque-token");
     return Response.json({ activity: { device: "Chrome" } });
   };
   const url = "https://frontend.example/api/auth/security/activity?token=opaque-token&user_id=99";
