@@ -164,6 +164,205 @@
   line-height: 20px;
 }
 
+.storeTopbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+  min-height: 80px;
+  padding: 16px 28px;
+  border-bottom: 1px solid #dedede;
+  background: #ffffff;
+}
+
+.storeTopbar > div {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.storeTopbar span,
+.storeSelector,
+.storeWelcome span,
+.storeCards span {
+  color: #6b6b6b;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  line-height: 16px;
+  text-transform: uppercase;
+}
+
+.storeTopbar strong {
+  overflow: hidden;
+  color: #171717;
+  font-size: 17px;
+  line-height: 24px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.storeSelector {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex: 0 1 380px;
+  justify-content: flex-end;
+}
+
+.storeSelector select {
+  width: min(260px, 100%);
+  min-height: 40px;
+  padding: 8px 34px 8px 12px;
+  border: 1px solid #cfcfcf;
+  border-radius: 8px;
+  background: #ffffff;
+  color: #171717;
+  font: inherit;
+  font-size: 14px;
+  text-transform: none;
+}
+
+.storeSelector select:focus-visible {
+  border-color: #171717;
+  outline: 2px solid rgba(23, 23, 23, 0.12);
+  outline-offset: 2px;
+}
+
+.storeContent {
+  padding: clamp(24px, 4vw, 52px);
+}
+
+.storeWelcome {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 24px;
+  padding: clamp(24px, 4vw, 42px);
+  border: 1px solid #dedede;
+  border-radius: 16px;
+  background: #ffffff;
+  box-shadow: 0 12px 36px rgba(0, 0, 0, 0.05);
+}
+
+.storeWelcome h1 {
+  margin: 8px 0 10px;
+  color: #111111;
+  font-size: clamp(28px, 4vw, 46px);
+  letter-spacing: -0.04em;
+  line-height: 1.05;
+}
+
+.storeWelcome p,
+.storeCards p,
+.storeNotice p,
+.emptyStore p {
+  margin: 0;
+  color: #656565;
+  font-size: 14px;
+  line-height: 22px;
+}
+
+.storeStatus {
+  flex: 0 0 auto;
+  padding: 7px 10px;
+  border: 1px solid;
+  border-radius: 999px;
+}
+
+.storeStatus.active {
+  border-color: #a8dfbd;
+  background: #effbf3;
+  color: #18733a;
+}
+
+.storeStatus.suspended {
+  border-color: #f0b8b3;
+  background: #fff2f0;
+  color: #a62f26;
+}
+
+.storeCards {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 16px;
+  margin-top: 16px;
+}
+
+.storeCards article {
+  min-width: 0;
+  padding: 22px;
+  border: 1px solid #dedede;
+  border-radius: 12px;
+  background: #ffffff;
+}
+
+.storeCards strong {
+  display: block;
+  overflow-wrap: anywhere;
+  margin: 12px 0 8px;
+  color: #171717;
+  font-size: 20px;
+  line-height: 26px;
+}
+
+.storeNotice,
+.suspendedNotice,
+.emptyStore {
+  border-radius: 12px;
+}
+
+.storeNotice {
+  padding: 20px;
+  border: 1px solid #f0b8b3;
+  background: #fff2f0;
+  color: #8e241c;
+}
+
+.storeNotice strong {
+  display: block;
+  margin-bottom: 4px;
+}
+
+.suspendedNotice {
+  margin-top: 16px;
+  padding: 14px 16px;
+  border: 1px solid #edc97c;
+  background: #fff8e5;
+  color: #78590d;
+  font-size: 14px;
+  line-height: 20px;
+}
+
+.emptyStore {
+  display: grid;
+  place-items: center;
+  min-height: 360px;
+  padding: 40px;
+  border: 1px dashed #bdbdbd;
+  background: #ffffff;
+  text-align: center;
+}
+
+.emptyStore > span {
+  display: grid;
+  place-items: center;
+  width: 48px;
+  height: 48px;
+  margin-bottom: 14px;
+  border-radius: 50%;
+  background: #171717;
+  color: #ffffff;
+  font-size: 26px;
+}
+
+.emptyStore strong {
+  margin-bottom: 6px;
+  color: #171717;
+  font-size: 20px;
+}
+
 .collapsed {
   grid-template-columns: 52px minmax(0, 1fr);
 }
@@ -176,6 +375,70 @@
 
 .collapsed .smallLabel {
   width: 100%;
+}
+
+@media (max-width: 900px) {
+  .shell,
+  .collapsed {
+    grid-template-columns: 64px minmax(0, 1fr);
+    min-width: 0;
+  }
+
+  .sidebar {
+    padding-inline: 8px;
+  }
+
+  .navigationItem span,
+  .smallLabel span,
+  .smallIcon {
+    display: none;
+  }
+
+  .storeTopbar {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .storeSelector {
+    align-items: flex-start;
+    flex: none;
+    flex-direction: column;
+    width: 100%;
+  }
+
+  .storeSelector select {
+    width: 100%;
+  }
+
+  .storeCards {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 560px) {
+  .shell,
+  .collapsed {
+    display: block;
+    padding: 0;
+  }
+
+  .sidebar {
+    display: none;
+  }
+
+  .mainContainer {
+    min-height: 100vh;
+    border-radius: 0;
+  }
+
+  .storeTopbar,
+  .storeContent {
+    padding: 20px;
+  }
+
+  .storeWelcome {
+    flex-direction: column;
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {

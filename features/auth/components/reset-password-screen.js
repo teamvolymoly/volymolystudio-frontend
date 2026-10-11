@@ -83,7 +83,7 @@ export default function ResetPasswordScreen({ email, token, goTo, onResetPasswor
             setPassword(event.target.value);
             setErrorMessage("");
           }}
-          placeholder="Enter your new password"
+          placeholder="Create a new password"
           type="password"
           value={password}
         />
@@ -96,7 +96,6 @@ export default function ResetPasswordScreen({ email, token, goTo, onResetPasswor
             setConfirmError("");
           }}
           placeholder="Confirm your new password"
-          showPasswordToggle={false}
           type="password"
           value={confirmPassword}
         />
