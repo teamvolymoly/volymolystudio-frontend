@@ -1,13 +1,14 @@
 "use client";
 
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { authApi } from "../../auth/services/auth-api";
 import styles from "./dashboard-shell.module.css";
 
 const primaryItems = [
-  { label: "Home", icon: "home" },
-  { label: "Orders", icon: "orders" },
+  { label: "Home", icon: "home", href: "/dashboard" },
+  { label: "Orders", icon: "orders", href: "/dashboard/orders" },
   { label: "Products", icon: "products" },
   { label: "Customers", icon: "home" },
   { label: "Growth", icon: "home" },
@@ -38,9 +39,19 @@ function Icon({ name, small = false }) {
   );
 }
 
-function NavigationItem({ disabled = false, icon = "home", label, onClick }) {
+function NavigationItem({ active = false, disabled = false, href, icon = "home", label, onClick }) {
+  const className = `${styles.navigationItem} ${active ? styles.navigationItemActive : ""}`;
+  if (href) {
+    return (
+      <Link aria-current={active ? "page" : undefined} className={className} href={href}>
+        <Icon name={icon} />
+        <span>{label}</span>
+      </Link>
+    );
+  }
+
   return (
-    <button className={styles.navigationItem} disabled={disabled} onClick={onClick} type="button">
+    <button className={className} disabled={disabled} onClick={onClick} type="button">
       <Icon name={icon} />
       <span>{label}</span>
     </button>
@@ -59,19 +70,34 @@ function SalesChannel({ label }) {
   );
 }
 
-export default function DashboardShell({ serviceAvailable, stores, user }) {
+export default function DashboardShell({
+  activeItem = "Home",
+  children,
+  initialStoreId = "",
+  serviceAvailable,
+  stores,
+  user,
+}) {
   const router = useRouter();
   const [collapsed, setCollapsed] = useState(false);
-  const [activeItem, setActiveItem] = useState("Home");
+  const [currentItem, setCurrentItem] = useState(activeItem);
   const [checkingAuth, setCheckingAuth] = useState(true);
   const [loggingOut, setLoggingOut] = useState(false);
   const [logoutError, setLogoutError] = useState("");
   const logoutBusy = useRef(false);
   const firstActiveStore = stores.find((store) => store.status === "active") || stores[0] || null;
   const [selectedStoreId, setSelectedStoreId] = useState(
-    firstActiveStore ? String(firstActiveStore.id) : ""
+    initialStoreId || (firstActiveStore ? String(firstActiveStore.id) : "")
   );
   const selectedStore = stores.find((store) => String(store.id) === String(selectedStoreId)) || firstActiveStore;
+
+  useEffect(() => {
+    setCurrentItem(activeItem);
+  }, [activeItem]);
+
+  useEffect(() => {
+    if (initialStoreId) setSelectedStoreId(String(initialStoreId));
+  }, [initialStoreId]);
 
   useEffect(() => {
     let active = true;
@@ -108,6 +134,13 @@ export default function DashboardShell({ serviceAvailable, stores, user }) {
     }
   }
 
+  function selectStore(storeId) {
+    setSelectedStoreId(storeId);
+    if (activeItem === "Orders") {
+      router.replace(`/dashboard/orders?store=${encodeURIComponent(storeId)}`);
+    }
+  }
+
   if (checkingAuth) return null;
 
   return (
@@ -127,10 +160,13 @@ export default function DashboardShell({ serviceAvailable, stores, user }) {
             <nav aria-label="Main navigation" className={styles.navigationList}>
               {primaryItems.map((item) => (
                 <NavigationItem
+                  active={currentItem === item.label}
+                  href={item.href === "/dashboard/orders" && selectedStoreId
+                    ? `${item.href}?store=${encodeURIComponent(selectedStoreId)}`
+                    : item.href}
                   icon={item.icon}
                   key={item.label}
                   label={item.label}
-                  onClick={() => setActiveItem(item.label)}
                 />
               ))}
             </nav>
@@ -140,7 +176,12 @@ export default function DashboardShell({ serviceAvailable, stores, user }) {
 
           <nav aria-label="Account navigation" className={styles.bottomNavigation}>
             {bottomItems.map((label) => (
-              <NavigationItem key={label} label={label} onClick={() => setActiveItem(label)} />
+              <NavigationItem
+                active={currentItem === label}
+                key={label}
+                label={label}
+                onClick={() => setCurrentItem(label)}
+              />
             ))}
             <NavigationItem
               disabled={loggingOut}
@@ -151,7 +192,7 @@ export default function DashboardShell({ serviceAvailable, stores, user }) {
         </div>
       </aside>
 
-      <section aria-label={`${activeItem} content`} className={styles.mainContainer}>
+      <section aria-label={`${currentItem} content`} className={styles.mainContainer}>
         {logoutError ? <p className={styles.logoutError} role="alert">{logoutError}</p> : null}
         <header className={styles.storeTopbar}>
           <div>
@@ -162,7 +203,7 @@ export default function DashboardShell({ serviceAvailable, stores, user }) {
             <label className={styles.storeSelector}>
               Current store
               <select
-                onChange={(event) => setSelectedStoreId(event.target.value)}
+                onChange={(event) => selectStore(event.target.value)}
                 value={selectedStoreId}
               >
                 {stores.map((store) => (
@@ -181,6 +222,8 @@ export default function DashboardShell({ serviceAvailable, stores, user }) {
               <strong>Store service unavailable</strong>
               <p>Laravel is not returning your store assignments. Please try again shortly.</p>
             </div>
+          ) : children ? (
+            children
           ) : selectedStore ? (
             <>
               <section className={styles.storeWelcome}>
