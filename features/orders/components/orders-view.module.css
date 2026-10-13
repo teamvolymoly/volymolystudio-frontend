@@ -49,6 +49,20 @@
   font-weight: 600;
 }
 
+.headingBadges {
+  display: flex;
+  flex: 0 0 auto;
+  align-items: flex-end;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.roleBadge {
+  color: #666666;
+  font-size: 12px;
+  font-weight: 600;
+}
+
 .summaryGrid {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
@@ -186,6 +200,18 @@
 .tableScroll td strong,
 .tableScroll td small {
   display: block;
+}
+
+.orderLink {
+  display: block;
+  color: #171717;
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.orderLink:hover {
+  text-decoration: underline;
+  text-underline-offset: 3px;
 }
 
 .tableScroll td small {

@@ -1,6 +1,7 @@
 import DashboardShell from "../../../../features/dashboard/components/dashboard-shell";
 import OrdersView from "../../../../features/orders/components/orders-view";
 import { verifySession } from "../../../../lib/dal/auth";
+import { merchantStoreIsAccessible, merchantStorePermissions } from "../../../../lib/merchant-store-access";
 import { fetchMerchantOrders, fetchMerchantStores } from "../../../../lib/server/laravel-client";
 
 export const metadata = { title: "Orders" };
@@ -17,7 +18,7 @@ export default async function OrdersPage({ searchParams }) {
   const stores = await fetchMerchantStores();
   const availableStores = stores || [];
   const activeStores = availableStores.filter((store) => (
-    store.status === "active" && store.organization?.status === "active"
+    merchantStoreIsAccessible(store) && merchantStorePermissions(store).orders.view
   ));
 
   const requestedStore = singleValue(params.store);
@@ -43,6 +44,7 @@ export default async function OrdersPage({ searchParams }) {
     >
       <OrdersView
         filters={{ page, query, status }}
+        hasAssignments={availableStores.length > 0}
         ordersData={orders}
         selectedStore={selectedStore}
       />

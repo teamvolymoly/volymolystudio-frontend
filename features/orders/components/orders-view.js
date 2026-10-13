@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { merchantRoleLabel, merchantStorePermissions } from "../../../lib/merchant-store-access";
 import styles from "./orders-view.module.css";
 
 const STATUS_OPTIONS = ["pending", "confirmed", "processing", "completed", "cancelled"];
@@ -31,12 +32,16 @@ function pageHref(storeId, filters, page) {
   return `/dashboard/orders?${params.toString()}`;
 }
 
-export default function OrdersView({ filters, ordersData, selectedStore }) {
+export default function OrdersView({ filters, hasAssignments, ordersData, selectedStore }) {
   if (!selectedStore) {
     return (
       <div className={styles.emptyState}>
-        <strong>No active store available</strong>
-        <p>Orders will appear after a Platform Super Admin assigns you an active store.</p>
+        <strong>{hasAssignments ? "No active store available" : "No store assigned yet"}</strong>
+        <p>
+          {hasAssignments
+            ? "Your assigned stores are suspended or unavailable. Contact the Platform Super Admin."
+            : "Orders will appear after a Platform Super Admin assigns you an active store."}
+        </p>
       </div>
     );
   }
@@ -52,6 +57,7 @@ export default function OrdersView({ filters, ordersData, selectedStore }) {
 
   const { orders, pagination, summary } = ordersData;
   const currency = ordersData.store?.currency || selectedStore.currency;
+  const permissions = merchantStorePermissions(selectedStore);
 
   return (
     <div className={styles.ordersPage}>
@@ -61,7 +67,12 @@ export default function OrdersView({ filters, ordersData, selectedStore }) {
           <h1>Orders</h1>
           <p>Only orders belonging to {selectedStore.name} are shown here.</p>
         </div>
-        <span className={styles.storeBadge}>{selectedStore.name}</span>
+        <div className={styles.headingBadges}>
+          <span className={styles.storeBadge}>{selectedStore.name}</span>
+          <span className={styles.roleBadge}>
+            {merchantRoleLabel(selectedStore.role)} · {permissions.orders.manage ? "Manage" : "View only"}
+          </span>
+        </div>
       </header>
 
       <section aria-label="Order summary" className={styles.summaryGrid}>
@@ -115,7 +126,12 @@ export default function OrdersView({ filters, ordersData, selectedStore }) {
               <tbody>
                 {orders.map((order) => (
                   <tr key={order.id}>
-                    <td><strong>{order.order_number}</strong><small>{order.items_count} {order.items_count === 1 ? "item" : "items"}</small></td>
+                    <td>
+                      <Link className={styles.orderLink} href={`/dashboard/orders/${order.id}?store=${selectedStore.id}`}>
+                        {order.order_number}
+                      </Link>
+                      <small>{order.items_count} {order.items_count === 1 ? "item" : "items"}</small>
+                    </td>
                     <td><strong>{order.customer?.name || "Guest customer"}</strong><small>{order.customer?.email || "No email"}</small></td>
                     <td>{dateTime(order.placed_at, selectedStore.timezone)}</td>
                     <td><span className={`${styles.status} ${styles[order.payment_status] || ""}`}>{label(order.payment_status)}</span></td>

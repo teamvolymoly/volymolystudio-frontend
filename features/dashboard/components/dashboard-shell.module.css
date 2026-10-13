@@ -277,6 +277,22 @@
   border-radius: 999px;
 }
 
+.storeBadges {
+  display: flex;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: 8px;
+}
+
+.roleBadge {
+  flex: 0 0 auto;
+  padding: 7px 10px;
+  border: 1px solid #d7d7d7;
+  border-radius: 999px;
+  background: #f7f7f7;
+  color: #333333 !important;
+}
+
 .storeStatus.active {
   border-color: #a8dfbd;
   background: #effbf3;
@@ -291,7 +307,7 @@
 
 .storeCards {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 16px;
   margin-top: 16px;
 }

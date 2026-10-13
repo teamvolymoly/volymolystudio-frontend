@@ -1,7 +1,7 @@
 // Keep auth requests on the frontend origin. The server-side route forwards
 // them to Laravel so browser sessions do not rely on third-party cookies.
 
-async function getCsrfToken() {
+export async function getCsrfToken() {
   // Laravel rotates the session token after login/logout. Read the token for
   // the current session before every mutation instead of caching an old one.
   const response = await fetch("/api/auth/csrf-token", {

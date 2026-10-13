@@ -1,8 +1,14 @@
 "use client";
 
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
+import {
+  merchantRoleLabel,
+  merchantStoreAccessMessage,
+  merchantStoreIsAccessible,
+  merchantStorePermissions,
+} from "../../../lib/merchant-store-access";
 import { authApi } from "../../auth/services/auth-api";
 import styles from "./dashboard-shell.module.css";
 
@@ -70,6 +76,15 @@ function SalesChannel({ label }) {
   );
 }
 
+function navigationHref(item, selectedStore, orderStore) {
+  if (!item.href) return undefined;
+
+  const store = item.label === "Orders" ? orderStore : selectedStore;
+  if (item.label === "Orders" && !store) return undefined;
+
+  return store ? `${item.href}?store=${encodeURIComponent(String(store.id))}` : item.href;
+}
+
 export default function DashboardShell({
   activeItem = "Home",
   children,
@@ -78,6 +93,7 @@ export default function DashboardShell({
   stores,
   user,
 }) {
+  const pathname = usePathname();
   const router = useRouter();
   const [collapsed, setCollapsed] = useState(false);
   const [currentItem, setCurrentItem] = useState(activeItem);
@@ -85,11 +101,25 @@ export default function DashboardShell({
   const [loggingOut, setLoggingOut] = useState(false);
   const [logoutError, setLogoutError] = useState("");
   const logoutBusy = useRef(false);
-  const firstActiveStore = stores.find((store) => store.status === "active") || stores[0] || null;
+  const firstAccessibleStore = stores.find(merchantStoreIsAccessible) || null;
+  const initialStore = stores.find((store) => String(store.id) === String(initialStoreId)) || null;
+  const firstStore = initialStore || firstAccessibleStore || stores[0] || null;
   const [selectedStoreId, setSelectedStoreId] = useState(
-    initialStoreId || (firstActiveStore ? String(firstActiveStore.id) : "")
+    firstStore ? String(firstStore.id) : ""
   );
-  const selectedStore = stores.find((store) => String(store.id) === String(selectedStoreId)) || firstActiveStore;
+  const selectedStore = stores.find((store) => String(store.id) === String(selectedStoreId))
+    || firstAccessibleStore
+    || stores[0]
+    || null;
+  const selectedPermissions = merchantStorePermissions(selectedStore);
+  const orderStores = stores.filter((store) => (
+    merchantStoreIsAccessible(store) && merchantStorePermissions(store).orders.view
+  ));
+  const selectableStores = activeItem === "Orders" ? orderStores : stores;
+  const orderStore = merchantStoreIsAccessible(selectedStore) && selectedPermissions.orders.view
+    ? selectedStore
+    : orderStores[0] || null;
+  const selectedStoreAvailable = merchantStoreIsAccessible(selectedStore);
 
   useEffect(() => {
     setCurrentItem(activeItem);
@@ -136,9 +166,10 @@ export default function DashboardShell({
 
   function selectStore(storeId) {
     setSelectedStoreId(storeId);
-    if (activeItem === "Orders") {
-      router.replace(`/dashboard/orders?store=${encodeURIComponent(storeId)}`);
-    }
+    const params = new URLSearchParams(window.location.search);
+    params.set("store", storeId);
+    params.delete("page");
+    router.replace(`${pathname}?${params.toString()}`);
   }
 
   if (checkingAuth) return null;
@@ -161,9 +192,8 @@ export default function DashboardShell({
               {primaryItems.map((item) => (
                 <NavigationItem
                   active={currentItem === item.label}
-                  href={item.href === "/dashboard/orders" && selectedStoreId
-                    ? `${item.href}?store=${encodeURIComponent(selectedStoreId)}`
-                    : item.href}
+                  disabled={item.label === "Orders" && !orderStore}
+                  href={navigationHref(item, selectedStore, orderStore)}
                   icon={item.icon}
                   key={item.label}
                   label={item.label}
@@ -199,14 +229,14 @@ export default function DashboardShell({
             <span>Merchant workspace</span>
             <strong>{selectedStore?.organization?.name || user.name}</strong>
           </div>
-          {stores.length > 1 ? (
+          {selectableStores.length > 1 ? (
             <label className={styles.storeSelector}>
               Current store
               <select
                 onChange={(event) => selectStore(event.target.value)}
                 value={selectedStoreId}
               >
-                {stores.map((store) => (
+                {selectableStores.map((store) => (
                   <option key={store.id} value={String(store.id)}>
                     {store.name}{store.status !== "active" ? " (Suspended)" : ""}
                   </option>
@@ -231,26 +261,32 @@ export default function DashboardShell({
                   <span>{selectedStore.organization?.name || "Merchant organization"}</span>
                   <h1>{selectedStore.name}</h1>
                   <p>
-                    You are connected as <b>{selectedStore.role || "member"}</b>. All future
-                    commerce data will stay inside this store.
+                    You are connected as <b>{merchantRoleLabel(selectedStore.role)}</b>. Your
+                    dashboard and orders stay isolated to this store.
                   </p>
                 </div>
-                <span
-                  className={`${styles.storeStatus} ${
-                    selectedStore.status === "active" ? styles.active : styles.suspended
-                  }`}
-                >
-                  {selectedStore.status}
-                </span>
+                <div className={styles.storeBadges}>
+                  <span className={styles.roleBadge}>{merchantRoleLabel(selectedStore.role)}</span>
+                  <span
+                    className={`${styles.storeStatus} ${selectedStoreAvailable ? styles.active : styles.suspended}`}
+                  >
+                    {selectedStoreAvailable ? "active" : "suspended"}
+                  </span>
+                </div>
               </section>
               <section className={styles.storeCards}>
                 <article><span>Store identifier</span><strong>/{selectedStore.slug}</strong><p>Used to identify this store securely.</p></article>
                 <article><span>Currency</span><strong>{selectedStore.currency}</strong><p>Default transaction currency.</p></article>
                 <article><span>Timezone</span><strong>{selectedStore.timezone}</strong><p>Used for orders and reporting.</p></article>
+                <article>
+                  <span>Order access</span>
+                  <strong>{selectedPermissions.orders.manage ? "Manage" : "View only"}</strong>
+                  <p>Controlled by your {merchantRoleLabel(selectedStore.role)} role.</p>
+                </article>
               </section>
-              {selectedStore.status !== "active" ? (
+              {!selectedStoreAvailable ? (
                 <div className={styles.suspendedNotice}>
-                  This store is suspended. Contact the Platform Super Admin to restore access.
+                  {merchantStoreAccessMessage(selectedStore)}
                 </div>
               ) : null}
             </>

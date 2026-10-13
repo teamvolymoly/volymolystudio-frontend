@@ -1,0 +1,341 @@
+.detailPage {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.breadcrumbs {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: #777777;
+  font-size: 13px;
+}
+
+.breadcrumbs a,
+.stateCard a {
+  color: #222222;
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.breadcrumbs a:hover,
+.stateCard a:hover {
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.heading {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 24px;
+}
+
+.heading > div > span,
+.cardHeading span,
+.timestamps span {
+  color: #6b6b6b;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  line-height: 16px;
+  text-transform: uppercase;
+}
+
+.heading h1 {
+  margin: 6px 0 8px;
+  color: #111111;
+  font-size: clamp(30px, 4vw, 44px);
+  letter-spacing: -0.04em;
+  line-height: 1.05;
+}
+
+.heading p,
+.stateCard p {
+  margin: 0;
+  color: #656565;
+  font-size: 14px;
+  line-height: 22px;
+}
+
+.status {
+  display: inline-flex;
+  padding: 7px 11px;
+  border-radius: 999px;
+  background: #eeeeee;
+  color: #4c4c4c;
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: capitalize;
+  white-space: nowrap;
+}
+
+.completed {
+  background: #eaf8ef;
+  color: #18733a;
+}
+
+.pending,
+.confirmed,
+.processing {
+  background: #fff5dc;
+  color: #76550c;
+}
+
+.cancelled {
+  background: #fff0ee;
+  color: #9b2c23;
+}
+
+.notice,
+.readOnlyNotice {
+  padding: 13px 15px;
+  border: 1px solid;
+  border-radius: 10px;
+  font-size: 13px;
+  line-height: 20px;
+}
+
+.notice.success {
+  border-color: #a8dfbd;
+  background: #effbf3;
+  color: #18733a;
+}
+
+.notice.error {
+  border-color: #f0b8b3;
+  background: #fff2f0;
+  color: #a62f26;
+}
+
+.readOnlyNotice {
+  border-color: #edc97c;
+  background: #fff8e5;
+  color: #78590d;
+}
+
+.contentGrid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.7fr) minmax(280px, 0.8fr);
+  align-items: start;
+  gap: 16px;
+}
+
+.mainColumn {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  min-width: 0;
+}
+
+.card,
+.stateCard {
+  border: 1px solid #dedede;
+  border-radius: 12px;
+  background: #ffffff;
+}
+
+.card {
+  padding: 20px;
+}
+
+.cardHeading {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 18px;
+}
+
+.cardHeading h2 {
+  margin: 4px 0 0;
+  color: #171717;
+  font-size: 18px;
+  line-height: 24px;
+}
+
+.cardHeading small {
+  color: #666666;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.stateForm {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+  margin-top: 16px;
+}
+
+.stateForm label {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  color: #555555;
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: capitalize;
+}
+
+.stateForm select {
+  min-height: 42px;
+  padding: 9px 32px 9px 11px;
+  border: 1px solid #cfcfcf;
+  border-radius: 8px;
+  background: #ffffff;
+  color: #171717;
+  font: inherit;
+  font-size: 13px;
+  text-transform: capitalize;
+}
+
+.stateForm select:disabled {
+  background: #f3f3f3;
+  color: #777777;
+}
+
+.stateForm label small {
+  color: #888888;
+  font-size: 10px;
+  font-weight: 500;
+  text-transform: none;
+}
+
+.stateForm button {
+  grid-column: 1 / -1;
+  justify-self: end;
+  min-height: 42px;
+  padding: 9px 16px;
+  border: 1px solid #171717;
+  border-radius: 8px;
+  background: #171717;
+  color: #ffffff;
+  cursor: pointer;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.stateForm button:disabled {
+  border-color: #bdbdbd;
+  background: #bdbdbd;
+  cursor: not-allowed;
+}
+
+.detailsList,
+.amounts {
+  margin: 0;
+}
+
+.detailsList {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 18px;
+}
+
+.detailsList div,
+.amounts div {
+  min-width: 0;
+}
+
+.detailsList dt,
+.amounts dt {
+  color: #777777;
+  font-size: 12px;
+}
+
+.detailsList dd {
+  overflow-wrap: anywhere;
+  margin: 5px 0 0;
+  color: #222222;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.amounts {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.amounts div {
+  display: flex;
+  justify-content: space-between;
+  gap: 18px;
+}
+
+.amounts dd {
+  margin: 0;
+  color: #333333;
+  font-size: 13px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.amounts .total {
+  margin-top: 4px;
+  padding-top: 14px;
+  border-top: 1px solid #e5e5e5;
+}
+
+.amounts .total dt,
+.amounts .total dd {
+  color: #171717;
+  font-size: 16px;
+  font-weight: 700;
+}
+
+.timestamps {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-top: 20px;
+  padding-top: 16px;
+  border-top: 1px solid #e5e5e5;
+}
+
+.timestamps strong {
+  color: #444444;
+  font-size: 12px;
+}
+
+.stateCard {
+  display: grid;
+  place-items: center;
+  min-height: 300px;
+  padding: 40px;
+  text-align: center;
+}
+
+.stateCard strong {
+  margin-bottom: 6px;
+  color: #171717;
+  font-size: 19px;
+}
+
+.stateCard a {
+  margin-top: 16px;
+}
+
+@media (max-width: 1050px) {
+  .contentGrid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 760px) {
+  .heading,
+  .cardHeading {
+    flex-direction: column;
+  }
+
+  .stateForm,
+  .detailsList {
+    grid-template-columns: 1fr;
+  }
+
+  .stateForm button {
+    width: 100%;
+  }
+}
