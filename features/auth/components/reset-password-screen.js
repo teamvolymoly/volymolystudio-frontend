@@ -2,6 +2,7 @@
 
 import { useRef, useState } from "react";
 import { TextField } from "../../../components/ui/text-field";
+import { evaluatePasswordStrength } from "../validation/password-strength";
 
 export default function ResetPasswordScreen({ email, token, goTo, onResetPassword, showError = false }) {
   const [password, setPassword] = useState("");
@@ -13,6 +14,7 @@ export default function ResetPasswordScreen({ email, token, goTo, onResetPasswor
   const [loading, setLoading] = useState(false);
   const busy = useRef(false);
   const resetEmail = email;
+  const passwordStrength = evaluatePasswordStrength(password);
 
   return (
     <div className="screen-content reset-screen">
@@ -77,7 +79,7 @@ export default function ResetPasswordScreen({ email, token, goTo, onResetPasswor
         <TextField
           autoComplete="new-password"
           error={errorMessage}
-          helper="Your password must be at least 8 characters, and can’t begin or end with a space."
+          helper={password ? undefined : "Your password must be at least 8 characters, and can’t begin or end with a space."}
           label="New password"
           onChange={(event) => {
             setPassword(event.target.value);
@@ -87,6 +89,25 @@ export default function ResetPasswordScreen({ email, token, goTo, onResetPasswor
           type="password"
           value={password}
         />
+        {passwordStrength ? (
+          <div className={`password-strength password-strength-${passwordStrength.label}`}>
+            <div
+              aria-label="Password strength"
+              aria-valuemax="3"
+              aria-valuemin="1"
+              aria-valuenow={passwordStrength.level}
+              aria-valuetext={passwordStrength.label}
+              className="password-strength-track"
+              role="meter"
+            >
+              <span className="password-strength-fill" />
+            </div>
+            <p aria-live="polite" className="password-strength-message">
+              <strong>Password strength: {passwordStrength.label}.</strong>{" "}
+              {passwordStrength.message}
+            </p>
+          </div>
+        ) : null}
         <TextField
           autoComplete="new-password"
           error={confirmError}
