@@ -732,8 +732,6 @@ input {
   flex: 1 1 auto;
   min-width: 0;
   overflow: hidden;
-  text-box-edge: cap alphabetic;
-  text-box-trim: trim-both;
   text-overflow: ellipsis;
 }
 
