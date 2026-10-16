@@ -2,7 +2,7 @@ import DashboardShell from "../../../../features/dashboard/components/dashboard-
 import ProductsView from "../../../../features/products/components/products-view";
 import { verifySession } from "../../../../lib/dal/auth";
 import { merchantStoreIsAccessible } from "../../../../lib/merchant-store-access";
-import { fetchMerchantStores } from "../../../../lib/server/laravel-client";
+import { fetchMerchantProducts, fetchMerchantStores } from "../../../../lib/server/laravel-client";
 
 export const metadata = { title: "Products" };
 
@@ -19,6 +19,9 @@ export default async function ProductsPage({ searchParams }) {
   const selectedStore = availableStores.find((store) => (
     String(store.id) === String(requestedStore) && merchantStoreIsAccessible(store)
   )) || availableStores.find(merchantStoreIsAccessible) || availableStores[0] || null;
+  const products = selectedStore && merchantStoreIsAccessible(selectedStore)
+    ? await fetchMerchantProducts(selectedStore.id)
+    : [];
 
   return (
     <DashboardShell
@@ -29,7 +32,7 @@ export default async function ProductsPage({ searchParams }) {
       stores={availableStores}
       user={user}
     >
-      <ProductsView />
+      <ProductsView products={products || []} />
     </DashboardShell>
   );
 }

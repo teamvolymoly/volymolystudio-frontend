@@ -30,3 +30,17 @@ test("the Products view uses local copies of every visible Figma asset", async (
     "../public/product-ui/checkbox-checked.svg",
   ].map((path) => access(new URL(path, import.meta.url))));
 });
+
+test("Products are loaded from the selected merchant store instead of a static frontend list", async () => {
+  const [page, view, client] = await Promise.all([
+    readFile(new URL("../app/(protected)/dashboard/products/page.js", import.meta.url), "utf8"),
+    readFile(new URL("../features/products/components/products-view.js", import.meta.url), "utf8"),
+    readFile(new URL("../lib/server/laravel-client.js", import.meta.url), "utf8"),
+  ]);
+
+  assert.match(page, /fetchMerchantProducts\(selectedStore\.id\)/);
+  assert.match(page, /<ProductsView products=\{products \|\| \[\]\} \/>/);
+  assert.doesNotMatch(view, /const PRODUCTS\s*=/);
+  assert.match(view, /export default function ProductsView\(\{ products \}\)/);
+  assert.match(client, /\/api\/v1\/merchant\/stores\/\$\{encodeURIComponent\(String\(storeId\)\)\}\/products/);
+});
