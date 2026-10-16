@@ -71,10 +71,6 @@
   opacity: 1;
 }
 
-.searchBar:focus-within {
-  box-shadow: 0 0 0 1px #bfbfbf;
-}
-
 .searchBar input::-webkit-search-cancel-button {
   cursor: pointer;
 }
@@ -90,16 +86,6 @@
   background: transparent;
   cursor: pointer;
   place-items: center;
-}
-
-.columnsButton:hover,
-.columnsButton:focus-visible {
-  background: var(--product-line);
-  outline: 0;
-}
-
-.columnsButton:active {
-  transform: scale(0.96);
 }
 
 .tableViewport {
@@ -170,10 +156,6 @@
   font-weight: 500;
   line-height: 20px;
   overflow-wrap: anywhere;
-}
-
-.productRow:hover .bodyCell {
-  background: #fafafa;
 }
 
 .checkboxCell {
@@ -249,13 +231,6 @@
   cursor: pointer;
 }
 
-.checkbox:hover,
-.checkbox:focus-visible {
-  border-color: #595959;
-  outline: 0;
-  box-shadow: 0 0 0 2px rgba(89, 89, 89, 0.12);
-}
-
 .checkboxChecked {
   border-color: #262626;
   background: #262626;
@@ -274,13 +249,5 @@
 
   .table {
     min-width: 900px;
-  }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .columnsButton,
-  .checkbox,
-  .productRow .bodyCell {
-    transition: none;
   }
 }
