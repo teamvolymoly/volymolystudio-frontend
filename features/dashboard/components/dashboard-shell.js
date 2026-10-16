@@ -15,7 +15,7 @@ import styles from "./dashboard-shell.module.css";
 const primaryItems = [
   { label: "Home", icon: "home", href: "/dashboard" },
   { label: "Orders", icon: "orders", href: "/dashboard/orders" },
-  { label: "Products", icon: "products" },
+  { label: "Products", icon: "products", href: "/dashboard/products" },
   { label: "Customers", icon: "home" },
   { label: "Growth", icon: "home" },
   { label: "Content", icon: "home" },
@@ -88,6 +88,7 @@ function navigationHref(item, selectedStore, orderStore) {
 export default function DashboardShell({
   activeItem = "Home",
   children,
+  fullBleed = false,
   initialStoreId = "",
   serviceAvailable,
   stores,
@@ -224,29 +225,31 @@ export default function DashboardShell({
 
       <section aria-label={`${currentItem} content`} className={styles.mainContainer}>
         {logoutError ? <p className={styles.logoutError} role="alert">{logoutError}</p> : null}
-        <header className={styles.storeTopbar}>
-          <div>
-            <span>Merchant workspace</span>
-            <strong>{selectedStore?.organization?.name || user.name}</strong>
-          </div>
-          {selectableStores.length > 1 ? (
-            <label className={styles.storeSelector}>
-              Current store
-              <select
-                onChange={(event) => selectStore(event.target.value)}
-                value={selectedStoreId}
-              >
-                {selectableStores.map((store) => (
-                  <option key={store.id} value={String(store.id)}>
-                    {store.name}{store.status !== "active" ? " (Suspended)" : ""}
-                  </option>
-                ))}
-              </select>
-            </label>
-          ) : null}
-        </header>
+        {!fullBleed ? (
+          <header className={styles.storeTopbar}>
+            <div>
+              <span>Merchant workspace</span>
+              <strong>{selectedStore?.organization?.name || user.name}</strong>
+            </div>
+            {selectableStores.length > 1 ? (
+              <label className={styles.storeSelector}>
+                Current store
+                <select
+                  onChange={(event) => selectStore(event.target.value)}
+                  value={selectedStoreId}
+                >
+                  {selectableStores.map((store) => (
+                    <option key={store.id} value={String(store.id)}>
+                      {store.name}{store.status !== "active" ? " (Suspended)" : ""}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            ) : null}
+          </header>
+        ) : null}
 
-        <div className={styles.storeContent}>
+        <div className={`${styles.storeContent} ${fullBleed ? styles.storeContentFullBleed : ""}`}>
           {!serviceAvailable ? (
             <div className={styles.storeNotice} role="alert">
               <strong>Store service unavailable</strong>

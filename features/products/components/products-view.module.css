@@ -1,0 +1,286 @@
+.page {
+  --product-background: #ffffff;
+  --product-line: #f0f0f0;
+  --product-category-background: #f0f0f0;
+  --product-category-text: #595959;
+  --product-text: #262626;
+  --product-search-background: #f5f5f5;
+  --product-search-text: #8c8c8c;
+  --product-checkbox-border: #bfbfbf;
+  width: 100%;
+  min-height: 100%;
+  padding: 24px 8px;
+  border-radius: 12px;
+  background: var(--product-background);
+}
+
+.tableCard {
+  width: 100%;
+  overflow: hidden;
+  border: 1px solid var(--product-line);
+  border-radius: 8px;
+  background: var(--product-background);
+}
+
+.toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  height: 52px;
+  padding: 8px;
+}
+
+.searchBar {
+  display: flex;
+  flex: 1 1 auto;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  height: 36px;
+  padding: 6px 8px;
+  border-radius: 8px;
+  background: var(--product-search-background);
+}
+
+.searchBar img,
+.columnsButton img,
+.checkbox img,
+.productImage {
+  display: block;
+  flex: 0 0 auto;
+  max-width: none;
+}
+
+.searchBar input {
+  flex: 1 1 auto;
+  min-width: 0;
+  height: 20px;
+  padding: 0;
+  border: 0;
+  outline: 0;
+  background: transparent;
+  color: var(--product-text);
+  font-size: 14px;
+  font-weight: 500;
+  line-height: 20px;
+}
+
+.searchBar input::placeholder {
+  color: var(--product-search-text);
+  opacity: 1;
+}
+
+.searchBar:focus-within {
+  box-shadow: 0 0 0 1px #bfbfbf;
+}
+
+.searchBar input::-webkit-search-cancel-button {
+  cursor: pointer;
+}
+
+.columnsButton {
+  display: grid;
+  flex: 0 0 auto;
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  border: 0;
+  border-radius: 4px;
+  background: transparent;
+  cursor: pointer;
+  place-items: center;
+}
+
+.columnsButton:hover,
+.columnsButton:focus-visible {
+  background: var(--product-line);
+  outline: 0;
+}
+
+.columnsButton:active {
+  transform: scale(0.96);
+}
+
+.tableViewport {
+  width: 100%;
+  overflow-x: auto;
+  scrollbar-width: thin;
+}
+
+.table {
+  min-width: 920px;
+}
+
+.gridRow {
+  display: grid;
+  grid-template-columns: 32px 280px repeat(6, minmax(98px, 1fr));
+  width: 100%;
+  padding: 0 8px;
+}
+
+.headerRow {
+  height: 40px;
+  align-items: center;
+}
+
+.headerCell {
+  display: flex;
+  align-items: center;
+  height: 28px;
+  padding: 4px;
+  background: var(--product-category-background);
+  color: var(--product-category-text);
+  font-size: 14px;
+  font-weight: 500;
+  line-height: 20px;
+  white-space: nowrap;
+}
+
+.checkboxHeader {
+  padding: 6px 8px;
+  border-radius: 8px 0 0 8px;
+}
+
+.lastHeaderCell {
+  border-radius: 0 8px 8px 0;
+}
+
+.tableBody {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.productRow {
+  height: 48px;
+  min-height: 48px;
+}
+
+.bodyCell {
+  display: flex;
+  align-items: center;
+  min-width: 0;
+  height: 48px;
+  min-height: 0;
+  padding: 4px;
+  border-bottom: 1px solid var(--product-line);
+  color: var(--product-text);
+  font-size: 14px;
+  font-weight: 500;
+  line-height: 20px;
+  overflow-wrap: anywhere;
+}
+
+.productRow:hover .bodyCell {
+  background: #fafafa;
+}
+
+.checkboxCell {
+  padding-inline: 8px;
+}
+
+.productCell {
+  gap: 0;
+}
+
+.productCell > span {
+  flex: 1 1 auto;
+  min-width: 0;
+  padding: 0 8px;
+}
+
+.productImage {
+  width: 36px;
+  height: 36px;
+  border-radius: 8px;
+  object-fit: cover;
+}
+
+.statusCell {
+  align-items: center;
+}
+
+.status {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 24px;
+  padding: 0 8px;
+  border-radius: 8px;
+  font-size: 12px;
+  font-weight: 500;
+  line-height: 16px;
+  text-transform: capitalize;
+  white-space: nowrap;
+}
+
+.active {
+  background: #12b76a;
+  color: #d1fadf;
+}
+
+.draft {
+  background: #f79009;
+  color: #fef0c7;
+}
+
+.unlisted {
+  background: #595959;
+  color: #f0f0f0;
+}
+
+.inventoryEmpty {
+  color: #f04438;
+}
+
+.checkbox {
+  display: flex;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 16px;
+  padding: 0;
+  overflow: hidden;
+  border: 1px solid var(--product-checkbox-border);
+  border-radius: 4px;
+  background: #ffffff;
+  cursor: pointer;
+}
+
+.checkbox:hover,
+.checkbox:focus-visible {
+  border-color: #595959;
+  outline: 0;
+  box-shadow: 0 0 0 2px rgba(89, 89, 89, 0.12);
+}
+
+.checkboxChecked {
+  border-color: #262626;
+  background: #262626;
+}
+
+@media (max-width: 900px) {
+  .page {
+    overflow-x: hidden;
+  }
+}
+
+@media (max-width: 560px) {
+  .page {
+    min-height: 100vh;
+  }
+
+  .table {
+    min-width: 900px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .columnsButton,
+  .checkbox,
+  .productRow .bodyCell {
+    transition: none;
+  }
+}

@@ -240,6 +240,11 @@
   padding: clamp(24px, 4vw, 52px);
 }
 
+.storeContentFullBleed {
+  height: 100%;
+  padding: 0;
+}
+
 .storeWelcome {
   display: flex;
   align-items: flex-start;
